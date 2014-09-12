@@ -1,18 +1,17 @@
 {
   "name": "good-file",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "repository": "git://github.com/hapijs/good-reporter",
   "description": "Good reporter file module",
   "main": "index.js",
   "scripts": {
     "test": "make test-cov"
   },
-  "author": "Adam Bretz",
-  "license": "ISC",
   "dependencies": {
     "async": "^0.9.x",
     "hoek": "^2.4.1",
-    "json-stringify-safe": "^5.0.0"
+    "json-stringify-safe": "^5.0.0",
+    "good-reporter": "^1.0.0"
   },
   "devDependencies": {
     "lab": "^4.3.0"

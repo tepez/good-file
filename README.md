@@ -15,7 +15,7 @@ Lead Maintainer: [Adam Bretz](https://github.com/arb)
 
 creates a new GoodFile object with the following arguments
 - `[options]` - optional arguments object
-	- `[events]` - an object of key value paris. Defaults to `{ request: [], log: [] }`.
+	- `[events]` - an object of key value paris. Defaults to `{ request: '*', log: '*' }`.
 		- `key` - one of ("request", "log", "error", or "ops") indicating the hapi event to subscribe to
 		- `value` - an array of tags to filter incomming events. An empty array indicates no filtering.
 	- `[maxFileSize]` - how large a single log file can grow before a new one is created. Defaults to `Infinity`

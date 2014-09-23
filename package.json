@@ -9,9 +9,10 @@
   },
   "dependencies": {
     "async": "^0.9.x",
+    "good-reporter": "^1.0.0",
     "hoek": "^2.4.1",
-    "json-stringify-safe": "^5.0.0",
-    "good-reporter": "^1.0.0"
+    "items": "^1.0.2",
+    "json-stringify-safe": "^5.0.0"
   },
   "devDependencies": {
     "lab": "^4.3.0"

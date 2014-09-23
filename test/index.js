@@ -393,41 +393,41 @@ describe('good-file', function () {
                 });
             });
         });
-    });
 
-    it('reports an error if it occurs', function (done) {
+        it('reports an error if it occurs', function (done) {
 
-        var file = internals.uniqueFile();
-        var reporter = new GoodFile('./test/fixtures/' + file, {
-            events: {
-                request: '*'
-            }
-        });
+            var file = internals.uniqueFile();
+            var reporter = new GoodFile('./test/fixtures/' + file, {
+                events: {
+                    request: '*'
+                }
+            });
 
-        reporter.start(function (error) {
+            reporter.start(function (error) {
 
-            expect(error).to.not.exist;
-            expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
+                expect(error).to.not.exist;
+                expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
 
-            reporter.queue('request', { statusCode: 200, id: 10 });
+                reporter.queue('request', { statusCode: 200, id: 10 });
 
-            var write = Writable.prototype.write;
+                var write = Writable.prototype.write;
 
-            Writable.prototype.write = function (data, callback) {
+                Writable.prototype.write = function (data, callback) {
 
-                callback(new Error('stream error'));
-            };
+                    callback(new Error('stream error'));
+                };
 
-            reporter.report(function (error) {
+                reporter.report(function (error) {
 
-                expect(error).to.exist;
-                expect(reporter._eventQueue.length).to.equal(0);
+                    expect(error).to.exist;
+                    expect(reporter._eventQueue.length).to.equal(0);
 
-                Writable.prototype.write = write;
+                    Writable.prototype.write = write;
 
-                internals.removeLog('./test/fixtures/' + file + '.001');
+                    internals.removeLog('./test/fixtures/' + file + '.001');
 
-                done();
+                    done();
+                });
             });
         });
     });

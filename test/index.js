@@ -42,12 +42,9 @@ internals.getLog = function (path, callback) {
 
 var describe = lab.describe;
 var it = lab.it;
-var before = lab.before;
-var beforeEach = lab.beforeEach;
-var after = lab.after;
 var expect = Lab.expect;
 
-describe('GoodFile', function () {
+describe('good-file', function () {
 
     it('throws an error without using new', function (done) {
 
@@ -71,7 +68,7 @@ describe('GoodFile', function () {
         done();
     });
 
-    it('#stop ends the stream', function (done) {
+    it('stop() ends the stream', function (done) {
 
         var file = internals.uniqueFile();
         var reporter = new GoodFile({
@@ -101,7 +98,7 @@ describe('GoodFile', function () {
 
     });
 
-    describe('#start', function () {
+    describe('start()', function () {
 
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
@@ -153,7 +150,7 @@ describe('GoodFile', function () {
         });
     });
 
-    describe('#report', function () {
+    describe('report()', function () {
 
         it('writes to the current file and does not create a new one', function (done) {
 

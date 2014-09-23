@@ -70,7 +70,7 @@ describe('good-file', function () {
         var file = internals.uniqueFile();
         var reporter = new GoodFile('./test/fixtures/' + file, {
             events: {
-                request:[]
+                request:  '*'
             }
         });
 
@@ -146,7 +146,7 @@ describe('good-file', function () {
             var file = internals.uniqueFile();
             var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
-                  request:[]
+                  request:  '*'
                 }
             });
 
@@ -180,7 +180,7 @@ describe('good-file', function () {
             var file = internals.uniqueFile();
             var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
-                    request:[]
+                    request:  '*'
                 },
                 maxLogSize: 300
             });
@@ -218,7 +218,7 @@ describe('good-file', function () {
             Fs.writeFileSync('./test/fixtures/' + file + '.001', 'dummy log data for testing');
             var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
-                    request:[]
+                    request: '*'
                 }
             });
 

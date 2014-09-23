@@ -105,7 +105,6 @@ describe('good-file', function () {
 
                 expect(error).to.not.exist;
 
-                expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
                 internals.removeLog(reporter._currentStream.path);
                 done();
             });
@@ -424,7 +423,7 @@ describe('good-file', function () {
 
                     Writable.prototype.write = write;
 
-                    internals.removeLog('./test/fixtures/' + file + '.001');
+                    internals.removeLog(reporter._currentStream.path);
 
                     done();
                 });

@@ -6,7 +6,6 @@ var GoodFile = require('..');
 var Fs = require('fs');
 var Writable = require('stream').Writable;
 var Crypto = require('crypto');
-var Path = require('path');
 
 // Declare internals
 
@@ -50,9 +49,7 @@ describe('good-file', function () {
 
         expect(function () {
 
-            var reporter = GoodFile({
-                path: './fixtures'
-            });
+            var reporter = GoodFile('./fixtures', {});
         }).to.throw('GoodReporter must be created with new');
 
         done();
@@ -63,7 +60,7 @@ describe('good-file', function () {
         expect(function () {
 
             var reporter = new GoodFile({});
-        }).to.throw('path must be specified');
+        }).to.throw('path must be a string');
 
         done();
     });
@@ -71,8 +68,7 @@ describe('good-file', function () {
     it('stop() ends the stream', function (done) {
 
         var file = internals.uniqueFile();
-        var reporter = new GoodFile({
-            path:'./test/fixtures/' + file,
+        var reporter = new GoodFile('./test/fixtures/' + file, {
             events: {
                 request:[]
             }
@@ -103,9 +99,7 @@ describe('good-file', function () {
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
             var file = internals.uniqueFile();
-            var reporter = new GoodFile({
-                path:'./test/fixtures/' + file
-            });
+            var reporter = new GoodFile('./test/fixtures/' + file);
 
             reporter.start(function (error) {
 
@@ -119,9 +113,7 @@ describe('good-file', function () {
 
         it('properly sets up the path and file information if only a path is specified', function (done) {
 
-            var reporter = new GoodFile({
-                path:'./test/fixtures/'
-            });
+            var reporter = new GoodFile('./test/fixtures/');
 
             reporter.start(function (error) {
 
@@ -138,9 +130,7 @@ describe('good-file', function () {
 
         it('will callback with an error if it occurs', function (done) {
 
-            var reporter = new GoodFile({
-                path: './test/foobar/'
-            });
+            var reporter = new GoodFile('./test/foobar/');
 
             reporter.start(function (error) {
 
@@ -155,8 +145,7 @@ describe('good-file', function () {
         it('writes to the current file and does not create a new one', function (done) {
 
             var file = internals.uniqueFile();
-            var reporter = new GoodFile({
-                path:'./test/fixtures/' + file,
+            var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
                   request:[]
                 }
@@ -190,8 +179,7 @@ describe('good-file', function () {
         it('creates new log files if the maxsize is exceeded', function (done) {
 
             var file = internals.uniqueFile();
-            var reporter = new GoodFile({
-                path:'./test/fixtures/' + file,
+            var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
                     request:[]
                 },
@@ -229,8 +217,7 @@ describe('good-file', function () {
 
             var file = internals.uniqueFile();
             Fs.writeFileSync('./test/fixtures/' + file + '.001', 'dummy log data for testing');
-            var reporter = new GoodFile({
-                path:'./test/fixtures/' + file,
+            var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
                     request:[]
                 }
@@ -265,8 +252,7 @@ describe('good-file', function () {
         it('will queue new events during a reporting cycle', function (done) {
 
             var file = internals.uniqueFile();
-            var reporter = new GoodFile({
-                path:'./test/fixtures/' + file,
+            var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
                     request: '*'
                 }
@@ -331,8 +317,7 @@ describe('good-file', function () {
         it('handles circular references in objects', function (done) {
 
             var file = internals.uniqueFile();
-            var reporter = new GoodFile({
-                path:'./test/fixtures/' + file,
+            var reporter = new GoodFile('./test/fixtures/' + file, {
                 events: {
                     request: '*'
                 }
@@ -368,13 +353,52 @@ describe('good-file', function () {
                 });
             });
         });
+
+        it('uses the file name and extension in calculating the next file', function (done) {
+
+            var file1 = internals.uniqueFile();
+            var file2 = internals.uniqueFile();
+
+            Fs.writeFileSync('./test/fixtures/' + file1 + '.010', 'dummy log data for testing');
+            var reporter = new GoodFile('./test/fixtures/' + file1);
+            var reporterTwo = new GoodFile('./test/fixtures/' + file2);
+
+            reporter.start(function() {
+
+                reporterTwo.start(function () {
+
+                    reporter.queue('request', { id: 1, data: 'reporter 1' });
+                    reporterTwo.queue('request', { id: 2, data: 'reporter 2' });
+                    reporterTwo.queue('request', { id: 3, data: 'reporter 2' });
+
+                    reporter.report(function (error) {
+
+                        expect(error).to.not.exist;
+                        expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file1 + '.011');
+                        expect(reporter._currentStream.bytesWritten).to.equal(29);
+
+                        reporterTwo.report(function (error) {
+
+                            expect(error).to.not.exist;
+                            expect(reporterTwo._currentStream.path).to.contain('/test/fixtures/' + file2 + '.001');
+                            expect(reporterTwo._currentStream.bytesWritten).to.equal(58);
+
+                            internals.removeLog(reporterTwo._currentStream.path);
+                            internals.removeLog(reporter._currentStream.path);
+                            internals.removeLog('./test/fixtures/' + file1 + '.010');
+
+                            done();
+                        });
+                    });
+                });
+            });
+        });
     });
 
     it('reports an error if it occurs', function (done) {
 
         var file = internals.uniqueFile();
-        var reporter = new GoodFile({
-            path:'./test/fixtures/' + file,
+        var reporter = new GoodFile('./test/fixtures/' + file, {
             events: {
                 request: '*'
             }

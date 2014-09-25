@@ -50,7 +50,7 @@ describe('good-file', function () {
         expect(function () {
 
             var reporter = GoodFile('./fixtures', {});
-        }).to.throw('GoodReporter must be created with new');
+        }).to.throw('GoodFile must be created with new');
 
         done();
     });

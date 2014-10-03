@@ -161,9 +161,8 @@ describe('good-file', function () {
                 expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
 
                 for (var i = 0; i < 20; ++i) {
-                    setImmediate(function (val) {
-                        ee.emit('request', 'request', { statusCode:200, id: val, tag: 'my test ' + val });
-                    }, i);
+
+                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
                 }
 
                 setTimeout(function () {
@@ -172,9 +171,6 @@ describe('good-file', function () {
 
                     expect(reporter._currentStream.bytesWritten).to.equal(900);
                     expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
-
-                    expect(reporter._eventQueue).to.be.empty;
-
                     internals.removeLog(reporter._currentStream.path);
 
                     done();
@@ -199,7 +195,7 @@ describe('good-file', function () {
                 expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
 
                 for (var i = 0; i < 20; ++i) {
-                    ee.emit('request', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
+                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
                 }
 
                 setTimeout(function () {
@@ -237,7 +233,7 @@ describe('good-file', function () {
                 expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.002');
 
                 for (var i = 0; i < 20; ++i) {
-                    ee.emit('request', 'request', { statusCode:200, id: i });
+                    ee.emit('report', 'request', { statusCode:200, id: i });
                 }
 
                 setTimeout(function() {
@@ -275,7 +271,7 @@ describe('good-file', function () {
 
                 data._data = data;
 
-                ee.emit('request', 'request', data);
+                ee.emit('report', 'request', data);
 
                 setTimeout(function() {
 
@@ -308,9 +304,9 @@ describe('good-file', function () {
 
                 reporterTwo.start(ee2, function () {
 
-                    ee1.emit('request', 'request', { id: 1, data: 'reporter 1' });
-                    ee2.emit('request', 'request', { id: 2, data: 'reporter 2' });
-                    ee2.emit('request', 'request', { id: 3, data: 'reporter 2' });
+                    ee1.emit('report', 'request', { id: 1, data: 'reporter 1' });
+                    ee2.emit('report', 'request', { id: 2, data: 'reporter 2' });
+                    ee2.emit('report', 'request', { id: 3, data: 'reporter 2' });
 
                     setTimeout(function() {
 

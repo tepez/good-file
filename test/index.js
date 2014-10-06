@@ -38,7 +38,7 @@ var describe = lab.describe;
 var it = lab.it;
 var expect = Lab.expect;
 
-describe('good-file', function () {
+describe('GoodFile', function () {
 
     it('throws an error without using new', function (done) {
 
@@ -138,7 +138,7 @@ describe('good-file', function () {
         });
     });
 
-    describe('report()', function () {
+    describe('_report()', function () {
 
         it('writes to the current file and does not create a new one', function (done) {
 

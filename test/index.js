@@ -19,13 +19,6 @@ internals.removeLog = function (path) {
 };
 
 
-internals.uniqueFile = function () {
-
-    var name = [Date.now(), process.pid, Crypto.randomBytes(8).toString('hex')].join('-');
-    return name;
-};
-
-
 internals.getLog = function (path, callback) {
 
     Fs.readFile(path, { encoding: 'utf8' }, function (error, data) {
@@ -101,8 +94,8 @@ describe('good-file', function () {
 
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
-            var file = internals.uniqueFile();
-            var reporter = new GoodFile('./test/fixtures/' + file);
+            var file = Hoek.uniqueFilename('./test/fixtures');
+            var reporter = new GoodFile(file);
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -149,8 +142,8 @@ describe('good-file', function () {
 
         it('writes to the current file and does not create a new one', function (done) {
 
-            var file = internals.uniqueFile();
-            var reporter = new GoodFile('./test/fixtures/' + file, {
+            var file = Hoek.uniqueFilename('./test/fixtures');
+            var reporter = new GoodFile(file, {
                 events: {
                   request:  '*'
                 }
@@ -160,7 +153,7 @@ describe('good-file', function () {
             reporter.start(ee, function (error) {
 
                 expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
+                expect(reporter._currentStream.path).to.equal(file + '.001');
 
                 for (var i = 0; i < 20; ++i) {
 
@@ -173,7 +166,7 @@ describe('good-file', function () {
 
                     expect(reporter._currentStream.bytesWritten).to.equal(900);
                     expect(reporter._currentStream._good.length).to.equal(900);
-                    expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
+                    expect(reporter._currentStream.path).to.equal(file + '.001');
                     internals.removeLog(reporter._currentStream.path);
 
                     done();
@@ -183,8 +176,8 @@ describe('good-file', function () {
 
         it('creates new log files if the maxsize is exceeded', function (done) {
 
-            var file = internals.uniqueFile();
-            var reporter = new GoodFile('./test/fixtures/' + file, {
+            var file = Hoek.uniqueFilename('./test/fixtures');
+            var reporter = new GoodFile(file, {
                 events: {
                     request:  '*'
                 },
@@ -195,7 +188,7 @@ describe('good-file', function () {
             reporter.start(ee, function (error) {
 
                 expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
+                expect(reporter._currentStream.path).to.equal(file + '.001');
 
                 for (var i = 0; i < 20; ++i) {
                     ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
@@ -205,12 +198,12 @@ describe('good-file', function () {
 
                     expect(reporter._currentStream.bytesWritten).to.equal(92);
                     expect(reporter._currentStream._good.length).to.equal(92);
-                    expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.004');
+                    expect(reporter._currentStream.path).to.equal(file + '.004');
 
-                    internals.removeLog('./test/fixtures/' + file + '.001');
-                    internals.removeLog('./test/fixtures/' + file + '.002');
-                    internals.removeLog('./test/fixtures/' + file + '.003');
-                    internals.removeLog('./test/fixtures/' + file + '.004');
+                    internals.removeLog(file + '.001');
+                    internals.removeLog(file + '.002');
+                    internals.removeLog(file + '.003');
+                    internals.removeLog(file + '.004');
 
                     done();
 
@@ -220,9 +213,9 @@ describe('good-file', function () {
 
         it('create a new log file next in the sequence if existing log files are present', function (done) {
 
-            var file = internals.uniqueFile();
-            Fs.writeFileSync('./test/fixtures/' + file + '.001', 'dummy log data for testing');
-            var reporter = new GoodFile('./test/fixtures/' + file, {
+            var file = Hoek.uniqueFilename('./test/fixtures');
+            Fs.writeFileSync(file + '.001', 'dummy log data for testing');
+            var reporter = new GoodFile(file, {
                 events: {
                     request: '*'
                 }
@@ -232,7 +225,7 @@ describe('good-file', function () {
             reporter.start(ee, function (error) {
 
                 expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.002');
+                expect(reporter._currentStream.path).to.equal(file + '.002');
 
                 for (var i = 0; i < 20; ++i) {
                     ee.emit('report', 'request', { statusCode:200, id: i });
@@ -242,10 +235,10 @@ describe('good-file', function () {
 
                     expect(reporter._currentStream.bytesWritten).to.equal(530);
                     expect(reporter._currentStream._good.length).to.equal(530);
-                    expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.002');
+                    expect(reporter._currentStream.path).to.equal(file + '.002');
 
-                    internals.removeLog('./test/fixtures/' + file + '.001');
-                    internals.removeLog('./test/fixtures/' + file + '.002');
+                    internals.removeLog(file + '.001');
+                    internals.removeLog(file + '.002');
 
                     done();
 
@@ -255,8 +248,8 @@ describe('good-file', function () {
 
         it('handles circular references in objects', function (done) {
 
-            var file = internals.uniqueFile();
-            var reporter = new GoodFile('./test/fixtures/' + file, {
+            var file = Hoek.uniqueFilename('./test/fixtures')
+            var reporter = new GoodFile(file, {
                 events: {
                     request: '*'
                 }
@@ -294,14 +287,14 @@ describe('good-file', function () {
 
         it('uses the file name and extension in calculating the next file', function (done) {
 
-            var file1 = internals.uniqueFile();
-            var file2 = internals.uniqueFile();
+            var file1 = Hoek.uniqueFilename('./test/fixtures');
+            var file2 = Hoek.uniqueFilename('./test/fixtures');
             var ee1 = new EventEmitter();
             var ee2 = new EventEmitter();
 
-            Fs.writeFileSync('./test/fixtures/' + file1 + '.010', 'dummy log data for testing');
-            var reporter = new GoodFile('./test/fixtures/' + file1);
-            var reporterTwo = new GoodFile('./test/fixtures/' + file2);
+            Fs.writeFileSync(file1 + '.010', 'dummy log data for testing');
+            var reporter = new GoodFile(file1);
+            var reporterTwo = new GoodFile(file2);
 
             reporter.start(ee1, function() {
 
@@ -313,17 +306,17 @@ describe('good-file', function () {
 
                     setTimeout(function() {
 
-                        expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file1 + '.011');
+                        expect(reporter._currentStream.path).to.equal(file1 + '.011');
                         expect(reporter._currentStream.bytesWritten).to.equal(29);
                         expect(reporter._currentStream._good.length).to.equal(29);
 
-                        expect(reporterTwo._currentStream.path).to.contain('/test/fixtures/' + file2 + '.001');
+                        expect(reporterTwo._currentStream.path).to.contain(file2 + '.001');
                         expect(reporterTwo._currentStream.bytesWritten).to.equal(58);
                         expect(reporterTwo._currentStream._good.length).to.equal(58);
 
                         internals.removeLog(reporterTwo._currentStream.path);
                         internals.removeLog(reporter._currentStream.path);
-                        internals.removeLog('./test/fixtures/' + file1 + '.010');
+                        internals.removeLog(file1 + '.010');
 
                         done();
 
@@ -334,8 +327,8 @@ describe('good-file', function () {
 
         it('can handle a large number of events without building back-pressure on the WriteStream', function (done) {
 
-            var file = internals.uniqueFile();
-            var reporter = new GoodFile('./test/fixtures/' + file, {
+            var file = Hoek.uniqueFilename('./test/fixtures')
+            var reporter = new GoodFile(file, {
                 events: {
                     request: '*'
                 }
@@ -363,7 +356,7 @@ describe('good-file', function () {
             reporter.start(ee, function (error) {
 
                 expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.contain('/test/fixtures/' + file + '.001');
+                expect(reporter._currentStream.path).to.equal(file + '.001');
 
                 reporter._currentStream.on('drain', function () {
 

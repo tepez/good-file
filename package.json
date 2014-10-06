@@ -8,13 +8,14 @@
     "test": "make test-cov"
   },
   "dependencies": {
-    "async": "^0.9.x",
-    "good-reporter": "^1.0.0",
-    "hoek": "^2.4.1",
-    "items": "^1.0.2",
-    "json-stringify-safe": "^5.0.0"
+    "async": "0.9.x",
+    "good-reporter": "git://github.com/hapijs/good-reporter.git#master",
+    "hoek": "2.x.x",
+    "items": "1.x.x",
+    "json-stringify-safe": "5.0.x"
   },
   "devDependencies": {
+    "hapi": "6.x.x",
     "lab": "^4.3.0"
   },
   "engines": {

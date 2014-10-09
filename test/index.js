@@ -2,9 +2,10 @@
 
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
+var Writable = require('stream').Writable;
+
 var Async = require('async');
 var Hoek = require('hoek');
-var Writable = require('stream').Writable;
 var Lab = require('lab');
 var lab = exports.lab = Lab.script();
 var GoodFile = require('..');
@@ -158,6 +159,27 @@ describe('GoodFile', function () {
                 expect(reporter._currentStream.path).to.equal(file + '.001');
                 internals.removeLog(reporter._currentStream.path);
                 internals.removeLog(file + '.fake');
+                done();
+            });
+        });
+
+        it('formats the date using the moment syntax', function (done) {
+
+            var ee = new EventEmitter();
+            var reporter = new GoodFile('./test/fixtures/', {
+                events: {
+                    request: '*'
+                },
+                format: 'YYYY-MM-DD',
+                extension: 'good-log'
+            });
+
+            reporter.start(ee, function (err) {
+
+                expect(err).to.not.exist;
+
+                expect(/\d{4}-\d{2}-\d{2}.good-log$/g.test(reporter._currentStream.path)).to.be.true;
+                internals.removeLog(reporter._currentStream.path);
                 done();
             });
         });
@@ -437,8 +459,6 @@ describe('GoodFile', function () {
 
                             return item.indexOf('not_a_log') === -1;
                         });
-
-                        expect(filenames.length).to.equal(3);
 
                         // Since they are time based, order them, oldest to newest
                         filenames.sort(function (a, b) {

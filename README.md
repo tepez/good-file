@@ -14,12 +14,16 @@ Lead Maintainer: [Adam Bretz](https://github.com/arb)
 ### new GoodFile (path, [options])
 
 creates a new GoodFile object with the following arguments
-- `path` - (required) location to write log files. "./path/" creates {timestamp} file in "./path/". "./path/log_name" creates "log_name" in "./path/". All log files created with `good-file` have three digit numerical extensions that are padded with "0"s ("1410562652544.005" or "log_name.005"). If "./path/" has any existing log files when this module is `start()`ed, the next number in sequence will be used.
+- `path` - (required) location to write log files. "./path/" creates "{timestamp}.extension" files in "./path/". "./path/log_name" creates "log_name.sequence" in "./path/". If you provide a "log_name", then the log files will be sequenced with a 3 digit file extension that will be padded with 0s. If your log files are created based on a timestamp, they will use `extension` as their file extension. If "./path/log_name" has any existing log files with the same name when this module is `start()`ed, the next number in sequence will be used.
 - `[options]` - optional arguments object
 	- `[events]` - an object of key value paris. Defaults to `{ request: '*', log: '*' }`.
 		- `key` - one of ("request", "log", "error", or "ops") indicating the hapi event to subscribe to
 		- `value` - an array of tags to filter incoming events. An empty array indicates no filtering.
-	- `[maxFileSize]` - how large a single log file can grow before a new one is created. Defaults to `Infinity`
+	- `[maxFileSize]` - how large a single log file can grow before a new one is created. Defaults to `Infinity`.
+	- `[extension]` - extension to use for time-based file naming. Defaults to "good".
+	- `[rotationTime]` - number of days to wait before advancing to the next log. Defaults to `0` which means use a different log rotation mechanism. This trumps all other file rotation mechanisms mechanisms. Implies `maxFileSize` of `Infinity` and always uses a `{timestamp}.extension` format.
+	- `[format]` - a [momentjs](http://momentjs.com/docs/#/displaying/format/) format string. This setting is used to control the log filename when using time-based file creation. Defaults to `null` which will use `Date.now()` as a string.
+
 
 ### GoodFile Methods
 `good-file` implements the [good-reporter](https://github.com/hapijs/good-reporter) interface as has no additional public methods.

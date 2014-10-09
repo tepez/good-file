@@ -2,9 +2,10 @@
 
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
-var Crypto = require('crypto');
-var Hoek = require('hoek');
 var Writable = require('stream').Writable;
+
+var Async = require('async');
+var Hoek = require('hoek');
 var Lab = require('lab');
 var lab = exports.lab = Lab.script();
 var GoodFile = require('..');
@@ -102,6 +103,8 @@ describe('GoodFile', function () {
 
                 expect(error).to.not.exist;
 
+                expect(reporter._currentStream.path).to.contain(file);
+
                 internals.removeLog(reporter._currentStream.path);
                 done();
             });
@@ -117,7 +120,7 @@ describe('GoodFile', function () {
                 expect(error).to.not.exist;
 
                 var path = reporter._currentStream.path;
-                expect(/\d+\.001/g.test(path)).to.equal(true);
+                expect(/\d+\.good/g.test(path)).to.equal(true);
 
                 internals.removeLog(path);
 
@@ -127,12 +130,56 @@ describe('GoodFile', function () {
 
         it('will callback with an error if it occurs', function (done) {
 
-            var reporter = new GoodFile('./test/foobar/');
+            var reporter = new GoodFile('./this/is/fake');
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
                 expect(error).to.exist;
+                done();
+            });
+        });
+
+        it('ignores files with non-numerical extensions that match the file name', function (done) {
+
+            var file = Hoek.uniqueFilename('./test/fixtures');
+            Fs.writeFileSync(file + '.fake', 'dummy log data for testing');
+            var ee = new EventEmitter();
+
+            var reporter = new GoodFile(file, {
+                events: {
+                    request: '*'
+                }
+            });
+
+            reporter.start(ee, function (err) {
+
+                expect(err).to.not.exist;
+
+                expect(reporter._currentStream.path).to.equal(file + '.001');
+                internals.removeLog(reporter._currentStream.path);
+                internals.removeLog(file + '.fake');
+                done();
+            });
+        });
+
+        it('formats the date using the moment syntax', function (done) {
+
+            var ee = new EventEmitter();
+            var reporter = new GoodFile('./test/fixtures/', {
+                events: {
+                    request: '*'
+                },
+                format: 'YYYY-MM-DD',
+                extension: 'good-log'
+            });
+
+            reporter.start(ee, function (err) {
+
+                expect(err).to.not.exist;
+
+                expect(/\d{4}-\d{2}-\d{2}.good-log$/g.test(reporter._currentStream.path)).to.be.true;
+                internals.removeLog(reporter._currentStream.path);
                 done();
             });
         });
@@ -367,6 +414,103 @@ describe('GoodFile', function () {
                 for (var i = 0; i <= 10000; i++) {
                     ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'value for iteration ' + i });
                 }
+            });
+        });
+
+        it('rotates log files based on the rotationTime option', function (done) {
+
+            var reporter = new GoodFile('./test/fixtures/', {
+                events: {
+                    request:  '*'
+                },
+                rotationTime:.00001
+
+            });
+            var ee = new EventEmitter();
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist;
+                expect(reporter._settings.rotationTime).to.exist;
+
+                for (var i = 0; i < 10; ++i) {
+
+                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
+                }
+
+                setTimeout(function () {
+
+                    for (var j = 0; j < 10; ++j) {
+
+                        ee.emit('report', 'request', { statusCode:200, id: j, tag: 'my test after 1000' + j });
+                    }
+                }, 900);
+
+                setTimeout(function () {
+
+                    expect(error).to.not.exist;
+
+                    reporter.stop();
+
+                    Fs.readdir('./test/fixtures', function (err, filenames) {
+
+                        var i = 0;
+                        filenames = filenames.filter(function (item) {
+
+                            return item.indexOf('not_a_log') === -1;
+                        });
+
+                        // Since they are time based, order them, oldest to newest
+                        filenames.sort(function (a, b) {
+
+                            return parseInt(a, 10) - parseInt(b, 10);
+                        });
+
+                        Async.eachSeries(filenames, function (item, next) {
+
+                            var path = './test/fixtures/' + item;
+
+                            internals.getLog(path, function (err, log) {
+
+                                expect(err).to.not.exist;
+
+                                if (i === 0) {
+                                    expect(log).to.deep.equal([
+                                        {statusCode:200,id:0,tag:"my test 0"},
+                                        {statusCode:200,id:1,tag:"my test 1"},
+                                        {statusCode:200,id:2,tag:"my test 2"},
+                                        {statusCode:200,id:3,tag:"my test 3"},
+                                        {statusCode:200,id:4,tag:"my test 4"},
+                                        {statusCode:200,id:5,tag:"my test 5"},
+                                        {statusCode:200,id:6,tag:"my test 6"},
+                                        {statusCode:200,id:7,tag:"my test 7"},
+                                        {statusCode:200,id:8,tag:"my test 8"},
+                                        {statusCode:200,id:9,tag:"my test 9"}
+                                    ]);
+                                } else if (i === 1) {
+                                    expect(log).to.deep.equal([
+                                        {statusCode:200,id:0,tag:"my test after 10000"},
+                                        {statusCode:200,id:1,tag:"my test after 10001"},
+                                        {statusCode:200,id:2,tag:"my test after 10002"},
+                                        {statusCode:200,id:3,tag:"my test after 10003"},
+                                        {statusCode:200,id:4,tag:"my test after 10004"},
+                                        {statusCode:200,id:5,tag:"my test after 10005"},
+                                        {statusCode:200,id:6,tag:"my test after 10006"},
+                                        {statusCode:200,id:7,tag:"my test after 10007"},
+                                        {statusCode:200,id:8,tag:"my test after 10008"},
+                                        {statusCode:200,id:9,tag:"my test after 10009"}
+                                    ]);
+                                } else {
+                                    expect(log).to.be.empty;
+                                }
+
+                                i++;
+
+                                Fs.unlink(path, next);
+                            });
+                        }, done);
+                    });
+                }, 2000);
             });
         });
     });

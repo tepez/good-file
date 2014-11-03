@@ -65,9 +65,7 @@ describe('GoodFile', function () {
 
         var file = Hoek.uniqueFilename('./test/fixtures');
         var reporter = new GoodFile(file, {
-            events: {
-                request:  '*'
-            }
+            request:  '*'
         });
         var ee = new EventEmitter();
 
@@ -89,6 +87,30 @@ describe('GoodFile', function () {
 
         });
 
+    });
+
+    it('logs a stream error if it occurs', function (done) {
+
+        var file = Hoek.uniqueFilename('./test/fixtures');
+        var reporter = new GoodFile(file, {
+            request:  '*'
+        });
+        var ee = new EventEmitter();
+        var logError = console.error;
+
+        console.error = function (value) {
+
+            console.error = logError;
+            expect(value.message).to.equal('mock error');
+            internals.removeLog(reporter._currentStream.path);
+            done();
+        };
+
+        reporter.start(ee, function (error) {
+
+            expect(error).to.not.exist;
+            reporter._currentStream.emit('error', new Error('mock error'));
+        });
     });
 
     describe('start()', function () {
@@ -146,11 +168,7 @@ describe('GoodFile', function () {
             Fs.writeFileSync(file + '.fake', 'dummy log data for testing');
             var ee = new EventEmitter();
 
-            var reporter = new GoodFile(file, {
-                events: {
-                    request: '*'
-                }
-            });
+            var reporter = new GoodFile(file);
 
             reporter.start(ee, function (err) {
 
@@ -166,10 +184,7 @@ describe('GoodFile', function () {
         it('formats the date using the moment syntax', function (done) {
 
             var ee = new EventEmitter();
-            var reporter = new GoodFile('./test/fixtures/', {
-                events: {
-                    request: '*'
-                },
+            var reporter = new GoodFile('./test/fixtures/', { request: '*'}, {
                 format: 'YYYY-MM-DD',
                 extension: 'good-log'
             });
@@ -191,9 +206,7 @@ describe('GoodFile', function () {
 
             var file = Hoek.uniqueFilename('./test/fixtures');
             var reporter = new GoodFile(file, {
-                events: {
-                  request:  '*'
-                }
+              request:  '*'
             });
             var ee = new EventEmitter();
 
@@ -225,9 +238,8 @@ describe('GoodFile', function () {
 
             var file = Hoek.uniqueFilename('./test/fixtures');
             var reporter = new GoodFile(file, {
-                events: {
-                    request:  '*'
-                },
+                request: '*'
+            }, {
                 maxLogSize: 300
             });
             var ee = new EventEmitter();
@@ -263,9 +275,7 @@ describe('GoodFile', function () {
             var file = Hoek.uniqueFilename('./test/fixtures');
             Fs.writeFileSync(file + '.001', 'dummy log data for testing');
             var reporter = new GoodFile(file, {
-                events: {
-                    request: '*'
-                }
+                request: '*'
             });
             var ee = new EventEmitter();
 
@@ -297,9 +307,7 @@ describe('GoodFile', function () {
 
             var file = Hoek.uniqueFilename('./test/fixtures')
             var reporter = new GoodFile(file, {
-                events: {
-                    request: '*'
-                }
+                request: '*'
             });
             var ee = new EventEmitter();
 
@@ -340,8 +348,8 @@ describe('GoodFile', function () {
             var ee2 = new EventEmitter();
 
             Fs.writeFileSync(file1 + '.010', 'dummy log data for testing');
-            var reporter = new GoodFile(file1);
-            var reporterTwo = new GoodFile(file2);
+            var reporter = new GoodFile(file1, { request: '*' });
+            var reporterTwo = new GoodFile(file2, { request: '*' });
 
             reporter.start(ee1, function() {
 
@@ -374,12 +382,8 @@ describe('GoodFile', function () {
 
         it('can handle a large number of events without building back-pressure on the WriteStream', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures')
-            var reporter = new GoodFile(file, {
-                events: {
-                    request: '*'
-                }
-            });
+            var file = Hoek.uniqueFilename('./test/fixtures');
+            var reporter = new GoodFile(file, { request: '*' });
             var ee = new EventEmitter();
             var drain = false;
             var writeCount = 0;
@@ -419,12 +423,9 @@ describe('GoodFile', function () {
 
         it('rotates log files based on the rotationTime option', function (done) {
 
-            var reporter = new GoodFile('./test/fixtures/', {
-                events: {
-                    request:  '*'
-                },
-                rotationTime:.00001
-
+            var reporter = new GoodFile('./test/fixtures/', { request:  '*' }, {
+                rotationTime:.00001,
+                extension: 'time'
             });
             var ee = new EventEmitter();
 
@@ -435,14 +436,14 @@ describe('GoodFile', function () {
 
                 for (var i = 0; i < 10; ++i) {
 
-                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
+                    ee.emit('report', 'request', { statusCode: 200, id: i, tag: 'my test ' + i });
                 }
 
                 setTimeout(function () {
 
                     for (var j = 0; j < 10; ++j) {
 
-                        ee.emit('report', 'request', { statusCode:200, id: j, tag: 'my test after 1000' + j });
+                        ee.emit('report', 'request', { statusCode: 200, id: j, tag: 'my test after 1000' + j });
                     }
                 }, 900);
 
@@ -457,7 +458,7 @@ describe('GoodFile', function () {
                         var i = 0;
                         filenames = filenames.filter(function (item) {
 
-                            return item.indexOf('not_a_log') === -1;
+                            return item.indexOf('time') > -1;
                         });
 
                         // Since they are time based, order them, oldest to newest
@@ -476,29 +477,29 @@ describe('GoodFile', function () {
 
                                 if (i === 0) {
                                     expect(log).to.deep.equal([
-                                        {statusCode:200,id:0,tag:"my test 0"},
-                                        {statusCode:200,id:1,tag:"my test 1"},
-                                        {statusCode:200,id:2,tag:"my test 2"},
-                                        {statusCode:200,id:3,tag:"my test 3"},
-                                        {statusCode:200,id:4,tag:"my test 4"},
-                                        {statusCode:200,id:5,tag:"my test 5"},
-                                        {statusCode:200,id:6,tag:"my test 6"},
-                                        {statusCode:200,id:7,tag:"my test 7"},
-                                        {statusCode:200,id:8,tag:"my test 8"},
-                                        {statusCode:200,id:9,tag:"my test 9"}
+                                        { statusCode: 200, id: 0, tag: "my test 0" },
+                                        { statusCode: 200, id: 1, tag: "my test 1" },
+                                        { statusCode: 200, id: 2, tag: "my test 2" },
+                                        { statusCode: 200, id: 3, tag: "my test 3" },
+                                        { statusCode: 200, id: 4, tag: "my test 4" },
+                                        { statusCode: 200, id: 5, tag: "my test 5" },
+                                        { statusCode: 200, id: 6, tag: "my test 6" },
+                                        { statusCode: 200, id: 7, tag: "my test 7" },
+                                        { statusCode: 200, id: 8, tag: "my test 8" },
+                                        { statusCode: 200, id: 9, tag: "my test 9" }
                                     ]);
                                 } else if (i === 1) {
                                     expect(log).to.deep.equal([
-                                        {statusCode:200,id:0,tag:"my test after 10000"},
-                                        {statusCode:200,id:1,tag:"my test after 10001"},
-                                        {statusCode:200,id:2,tag:"my test after 10002"},
-                                        {statusCode:200,id:3,tag:"my test after 10003"},
-                                        {statusCode:200,id:4,tag:"my test after 10004"},
-                                        {statusCode:200,id:5,tag:"my test after 10005"},
-                                        {statusCode:200,id:6,tag:"my test after 10006"},
-                                        {statusCode:200,id:7,tag:"my test after 10007"},
-                                        {statusCode:200,id:8,tag:"my test after 10008"},
-                                        {statusCode:200,id:9,tag:"my test after 10009"}
+                                        { statusCode: 200, id: 0, tag: "my test after 10000" },
+                                        { statusCode: 200, id: 1, tag: "my test after 10001" },
+                                        { statusCode: 200, id: 2, tag: "my test after 10002" },
+                                        { statusCode: 200, id: 3, tag: "my test after 10003" },
+                                        { statusCode: 200, id: 4, tag: "my test after 10004" },
+                                        { statusCode: 200, id: 5, tag: "my test after 10005" },
+                                        { statusCode: 200, id: 6, tag: "my test after 10006" },
+                                        { statusCode: 200, id: 7, tag: "my test after 10007" },
+                                        { statusCode: 200, id: 8, tag: "my test after 10008" },
+                                        { statusCode: 200, id: 9, tag: "my test after 10009" }
                                     ]);
                                 } else {
                                     expect(log).to.be.empty;

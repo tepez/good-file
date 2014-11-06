@@ -6,10 +6,12 @@ var Path = require('path');
 var Writable = require('stream').Writable;
 
 var Async = require('async');
-var Hoek = require('hoek');
+var Code = require('code');
 var Lab = require('lab');
 var lab = exports.lab = Lab.script();
+var Hoek = require('hoek');
 var GoodFile = require('..');
+
 
 // Declare internals
 
@@ -38,7 +40,7 @@ internals.getLog = function (path, callback) {
 
 var describe = lab.describe;
 var it = lab.it;
-var expect = Lab.expect;
+var expect = Code.expect;
 
 describe('GoodFile', function () {
 

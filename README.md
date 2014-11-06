@@ -23,6 +23,7 @@ creates a new GoodFile object with the following arguments
 	- `[extension]` - extension to use for time-based file naming. Defaults to "good".
 	- `[rotationTime]` - number of days to wait before advancing to the next log. Defaults to `0` which means use a different log rotation mechanism. This trumps all other file rotation mechanisms mechanisms. Implies `maxFileSize` of `Infinity` and always uses a `{timestamp}.extension` format.
 	- `[format]` - a [momentjs](http://momentjs.com/docs/#/displaying/format/) format string. This setting is used to control the log filename when using time-based file creation. Defaults to `null` which will use `Date.now()` as a string.
+	- `[fileName]` - a string that will be used for the file name. Implies `maxFileSize` of `Infinity`. Trumps all other file naming and rotation conventions.
 
 
 ### GoodFile Methods

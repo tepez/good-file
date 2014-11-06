@@ -2,6 +2,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
+var Path = require('path');
 var Writable = require('stream').Writable;
 
 var Async = require('async');
@@ -198,6 +199,26 @@ describe('GoodFile', function () {
                 done();
             });
         });
+
+        it('will create the full file specified by the "fileName" option', function (done) {
+
+            var file = Path.resolve('./test/fixtures/');
+            var reporter = new GoodFile(file, {}, {
+                fileName: 'ops.log'
+            });
+            var ee = new EventEmitter();
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist;
+
+                expect(reporter._currentStream.path).to.equal(file + '/ops.log');
+
+                internals.removeLog(reporter._currentStream.path);
+                done();
+            });
+
+        });
     });
 
     describe('_report()', function () {
@@ -227,6 +248,39 @@ describe('GoodFile', function () {
                     expect(reporter._currentStream.bytesWritten).to.equal(900);
                     expect(reporter._currentStream._good.length).to.equal(900);
                     expect(reporter._currentStream.path).to.equal(file + '.001');
+                    internals.removeLog(reporter._currentStream.path);
+
+                    done();
+                }, 2000);
+            });
+        });
+
+        it('writes to the current file and does not create a new one using the "fileName" option', function (done) {
+
+            var file = Path.resolve('./test/fixtures/');
+            var reporter = new GoodFile(file, { request: '*' }, {
+                fileName: 'ops.log'
+            });
+            var ee = new EventEmitter();
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist;
+                expect(reporter._currentStream.path).to.equal(file + '/ops.log');
+                expect(reporter._settings.maxLogSize).to.equal(Infinity);
+
+                for (var i = 0; i < 50; ++i) {
+
+                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
+                }
+
+                setTimeout(function () {
+
+                    expect(error).to.not.exist;
+
+                    expect(reporter._currentStream.bytesWritten).to.equal(2280);
+                    expect(reporter._currentStream._good.length).to.equal(2280);
+                    expect(reporter._currentStream.path).to.equal(file + '/ops.log');
                     internals.removeLog(reporter._currentStream.path);
 
                     done();

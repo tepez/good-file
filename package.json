@@ -8,12 +8,9 @@
     "test": "make test-cov"
   },
   "dependencies": {
-    "async": "0.9.x",
     "good-reporter": "3.x.x",
     "hoek": "2.x.x",
-    "items": "1.x.x",
-    "json-stringify-safe": "5.0.x",
-    "moment": "2.8.x"
+    "json-stringify-safe": "5.0.x"
   },
   "devDependencies": {
     "code": "1.x.x",

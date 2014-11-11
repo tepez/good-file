@@ -2,6 +2,8 @@
 
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
+var Os = require('os');
+var Readable = require('stream').Readable;
 
 var Code = require('code');
 var Lab = require('lab');
@@ -12,11 +14,16 @@ var GoodFile = require('..');
 
 // Declare internals
 
-var internals = {};
+var internals = {
+    timeout: process.env.TIMEOUT || 1000,
+    tempDir: Os.tmpDir()
+};
 
 internals.removeLog = function (path) {
 
-    Fs.unlinkSync(path);
+    if (Fs.existsSync(path)) {
+        Fs.unlinkSync(path);
+    }
 };
 
 
@@ -63,13 +70,13 @@ describe('GoodFile', function () {
 
     it('stop() ends the stream and kills the queue', function (done) {
 
-        var file = Hoek.uniqueFilename('./test/fixtures');
+        var file = Hoek.uniqueFilename(internals.tempDir);
         var reporter = new GoodFile({ request:  '*' }, { file: file });
         var ee = new EventEmitter();
 
         reporter.start(ee, function (error) {
 
-            expect(error).to.not.exist;
+            expect(error).to.not.exist();
 
             ee.emit('report', 'request', { id: 1, timestamp: Date.now() });
 
@@ -88,7 +95,7 @@ describe('GoodFile', function () {
 
     it('logs a stream error if it occurs', function (done) {
 
-        var file = Hoek.uniqueFilename('./test/fixtures');
+        var file = Hoek.uniqueFilename(internals.tempDir);
         var reporter = new GoodFile({ request:  '*' }, { file: file });
         var ee = new EventEmitter();
         var logError = console.error;
@@ -103,7 +110,7 @@ describe('GoodFile', function () {
 
         reporter.start(ee, function (error) {
 
-            expect(error).to.not.exist;
+            expect(error).to.not.exist();
             reporter._writeStream.emit('error', new Error('mock error'));
         });
     });
@@ -112,13 +119,13 @@ describe('GoodFile', function () {
 
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            var reporter = new GoodFile({ }, { file: file });
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({}, { file: file });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exist;
+                expect(error).to.not.exist();
 
                 expect(reporter._writeStream.path).to.equal(file);
 
@@ -127,14 +134,13 @@ describe('GoodFile', function () {
             });
         });
 
-        it('properly creates a random file if the directoy option is specified', function (done) {
+        it('properly creates a random file if the directory option is specified', function (done) {
 
-            var reporter = new GoodFile({ }, { directory: './test/fixtures' });
+            var reporter = new GoodFile({}, { directory: internals.tempDir });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
-                //console.log()
                 expect(error).to.not.exist();
                 expect(/good-file-\d+-.+.log/g.test(reporter._writeStream.path)).to.be.true();
 
@@ -148,7 +154,7 @@ describe('GoodFile', function () {
 
         it('writes to the current file and does not create a new one', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures');
+            var file = Hoek.uniqueFilename(internals.tempDir);
             var reporter = new GoodFile({ request:  '*' }, { file: file });
             var ee = new EventEmitter();
 
@@ -170,13 +176,13 @@ describe('GoodFile', function () {
                     internals.removeLog(reporter._writeStream.path);
 
                     done();
-                }, 1000);
+                }, internals.timeout);
             });
         });
 
         it('handles circular references in objects', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures');
+            var file = Hoek.uniqueFilename(internals.tempDir);
             var reporter = new GoodFile({ request: '*' }, { file: file });
             var ee = new EventEmitter();
 
@@ -205,13 +211,13 @@ describe('GoodFile', function () {
 
                         done();
                     });
-                }, 1000);
+                }, internals.timeout);
             });
         });
 
-        it('can handle a large number of events by limited the number of writes to the stream', function (done) {
+        it('can handle a large number of events', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures');
+            var file = Hoek.uniqueFilename(internals.tempDir);
             var reporter = new GoodFile({ request: '*' }, { file: file });
             var ee = new EventEmitter();
 
@@ -230,8 +236,67 @@ describe('GoodFile', function () {
                     internals.removeLog(reporter._writeStream.path);
 
                     done();
-                }, 1000);
+                }, internals.timeout);
             });
+        });
+
+        it('will log events even after a delay', function (done) {
+
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({ request: '*' }, { file: file });
+            var ee = new EventEmitter();
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist();
+                expect(reporter._writeStream.path).to.equal(file);
+
+                for (var i = 0; i <= 100; i++) {
+                    ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'value for iteration ' + i });
+                }
+
+                setTimeout(function() {
+
+                    for (var i = 0; i <= 100; i++) {
+                        ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'inner iteration ' + i });
+                    }
+
+                    setTimeout(function() {
+
+                        reporter.stop();
+                        expect(reporter._writeStream.bytesWritten).to.equal(13498);
+                        internals.removeLog(reporter._writeStream.path);
+                        done();
+                    }, internals.timeout);
+
+                }, 100);
+            });
+        });
+
+        it('calls the internal _doRead method after report if there are still free bytes in the write stream', function (done) {
+
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({ request: '*' }, { file: file });
+            var hitCount = 0;
+
+            // Mock the read stream
+            reporter._readableStream = {
+                _eventQueue: [],
+                _reading: 1,
+               _doRead: function () {
+
+                    hitCount++;
+
+                    expect(hitCount).to.equal(1);
+                    expect(this._eventQueue).to.have.length(2);
+                    done();
+                }
+            };
+
+            reporter._report('request', { id: 1, time: Date.now() });
+            // Simulate the hard drive throttling the read requests
+            reporter._readableStream._reading = 0;
+            reporter._report('request', { id: 2, time: Date.now() });
         });
     });
 });

@@ -14,7 +14,6 @@ var GoodFile = require('..');
 // Declare internals
 
 var internals = {
-    timeout: process.env.TIMEOUT || 1000,
     tempDir: Os.tmpDir()
 };
 
@@ -80,16 +79,22 @@ describe('GoodFile', function () {
             ee.emit('report', 'request', { id: 1, timestamp: Date.now() });
 
             reporter.stop();
-            expect(reporter._writeStream.bytesWritten).to.equal(0);
-            expect(reporter._writeStream.path).to.equal(file);
-            expect(reporter._writeStream._writableState.ended).to.equal(true);
 
-            internals.removeLog(reporter._writeStream.path);
+            // This should NOT get reported because the stream has been stopped
+            ee.emit('report', 'request', { id: 2, timestamp: Date.now() });
 
-            done();
+            reporter._writeStream.on('finish', function() {
 
+                expect(reporter._writeStream.bytesWritten).to.equal(35);
+                expect(reporter._writeStream.path).to.equal(file);
+                expect(reporter._writeStream._writableState.ended).to.be.true();
+                expect(reporter._stopped).to.be.true();
+
+                internals.removeLog(reporter._writeStream.path);
+
+                done();
+            });
         });
-
     });
 
     it('logs a stream error if it occurs', function (done) {
@@ -167,7 +172,7 @@ describe('GoodFile', function () {
                     ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
                 }
 
-                setTimeout(function () {
+                reporter._writeStream.on('finish', function() {
 
                     expect(error).to.not.exist();
 
@@ -175,7 +180,9 @@ describe('GoodFile', function () {
                     internals.removeLog(reporter._writeStream.path);
 
                     done();
-                }, internals.timeout);
+                });
+
+                reporter.stop();
             });
         });
 
@@ -198,7 +205,7 @@ describe('GoodFile', function () {
 
                 ee.emit('report', 'request', data);
 
-                setTimeout(function() {
+                reporter._writeStream.on('finish', function() {
 
                     internals.getLog(reporter._writeStream.path, function (error, results) {
 
@@ -210,7 +217,9 @@ describe('GoodFile', function () {
 
                         done();
                     });
-                }, internals.timeout);
+                });
+
+                reporter.stop();
             });
         });
 
@@ -228,14 +237,16 @@ describe('GoodFile', function () {
                 for (var i = 0; i <= 10000; i++) {
                     ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'value for iteration ' + i });
                 }
-                setTimeout(function() {
 
-                    reporter.stop();
+                reporter._writeStream.on('finish', function() {
+
                     expect(reporter._writeStream.bytesWritten).to.equal(727855);
                     internals.removeLog(reporter._writeStream.path);
 
                     done();
-                }, internals.timeout);
+                });
+
+                reporter.stop();
             });
         });
 
@@ -260,15 +271,15 @@ describe('GoodFile', function () {
                         ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'inner iteration ' + i });
                     }
 
-                    setTimeout(function() {
+                    reporter._writeStream.on('finish', function() {
 
-                        reporter.stop();
                         expect(reporter._writeStream.bytesWritten).to.equal(13498);
                         internals.removeLog(reporter._writeStream.path);
                         done();
-                    }, internals.timeout);
+                    });
 
-                }, 100);
+                    reporter.stop();
+                }, 500);
             });
         });
     });

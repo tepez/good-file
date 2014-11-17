@@ -67,7 +67,7 @@ describe('GoodFile', function () {
         done();
     });
 
-    it('stop() ends the stream and kills the queue', function (done) {
+    it('stop() ends the stream', function (done) {
 
         var file = Hoek.uniqueFilename(internals.tempDir);
         var reporter = new GoodFile({ request:  '*' }, { file: file });
@@ -270,32 +270,6 @@ describe('GoodFile', function () {
 
                 }, 100);
             });
-        });
-
-        it('calls the internal _doRead method after report if there are still free bytes in the write stream', function (done) {
-
-            var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile({ request: '*' }, { file: file });
-            var hitCount = 0;
-
-            // Mock the read stream
-            reporter._readableStream = {
-                _eventQueue: [],
-                _reading: 1,
-               _doRead: function () {
-
-                    hitCount++;
-
-                    expect(hitCount).to.equal(1);
-                    expect(this._eventQueue).to.have.length(2);
-                    done();
-                }
-            };
-
-            reporter._report('request', { id: 1, time: Date.now() });
-            // Simulate the hard drive throttling the read requests
-            reporter._readableStream._reading = 0;
-            reporter._report('request', { id: 2, time: Date.now() });
         });
     });
 });

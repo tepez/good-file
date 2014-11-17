@@ -2,10 +2,8 @@
 
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
-var Path = require('path');
-var Writable = require('stream').Writable;
+var Os = require('os');
 
-var Async = require('async');
 var Code = require('code');
 var Lab = require('lab');
 var lab = exports.lab = Lab.script();
@@ -15,11 +13,16 @@ var GoodFile = require('..');
 
 // Declare internals
 
-var internals = {};
+var internals = {
+    timeout: process.env.TIMEOUT || 1000,
+    tempDir: Os.tmpDir()
+};
 
 internals.removeLog = function (path) {
 
-    Fs.unlinkSync(path);
+    if (Fs.existsSync(path)) {
+        Fs.unlinkSync(path);
+    }
 };
 
 
@@ -54,37 +57,34 @@ describe('GoodFile', function () {
         done();
     });
 
-    it('throws an error if missing path', function (done) {
+    it('throws an error if missing file', function (done) {
 
         expect(function () {
 
             var reporter = new GoodFile({});
-        }).to.throw('path must be a string');
+        }).to.throw('file or directory must be specified as strings');
 
         done();
     });
 
-    it('stop() ends the stream and kills the queue', function (done) {
+    it('stop() ends the stream', function (done) {
 
-        var file = Hoek.uniqueFilename('./test/fixtures');
-        var reporter = new GoodFile(file, {
-            request:  '*'
-        });
+        var file = Hoek.uniqueFilename(internals.tempDir);
+        var reporter = new GoodFile({ request:  '*' }, { file: file });
         var ee = new EventEmitter();
 
         reporter.start(ee, function (error) {
 
-            expect(error).to.not.exist;
+            expect(error).to.not.exist();
 
             ee.emit('report', 'request', { id: 1, timestamp: Date.now() });
 
             reporter.stop();
-            expect(reporter._currentStream.bytesWritten).to.equal(0);
-            expect(reporter._currentStream.path).to.contain(file +  '.001');
-            expect(reporter._currentStream._writableState.ended).to.equal(true);
-            expect(reporter._queue.running()).to.equal(0);
+            expect(reporter._writeStream.bytesWritten).to.equal(0);
+            expect(reporter._writeStream.path).to.equal(file);
+            expect(reporter._writeStream._writableState.ended).to.equal(true);
 
-            internals.removeLog(reporter._currentStream.path);
+            internals.removeLog(reporter._writeStream.path);
 
             done();
 
@@ -94,10 +94,8 @@ describe('GoodFile', function () {
 
     it('logs a stream error if it occurs', function (done) {
 
-        var file = Hoek.uniqueFilename('./test/fixtures');
-        var reporter = new GoodFile(file, {
-            request:  '*'
-        });
+        var file = Hoek.uniqueFilename(internals.tempDir);
+        var reporter = new GoodFile({ request:  '*' }, { file: file });
         var ee = new EventEmitter();
         var logError = console.error;
 
@@ -105,14 +103,14 @@ describe('GoodFile', function () {
 
             console.error = logError;
             expect(value.message).to.equal('mock error');
-            internals.removeLog(reporter._currentStream.path);
+            internals.removeLog(reporter._writeStream.path);
             done();
         };
 
         reporter.start(ee, function (error) {
 
-            expect(error).to.not.exist;
-            reporter._currentStream.emit('error', new Error('mock error'));
+            expect(error).to.not.exist();
+            reporter._writeStream.emit('error', new Error('mock error'));
         });
     });
 
@@ -120,106 +118,34 @@ describe('GoodFile', function () {
 
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            var reporter = new GoodFile(file);
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({}, { file: file });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exist;
+                expect(error).to.not.exist();
 
-                expect(reporter._currentStream.path).to.contain(file);
+                expect(reporter._writeStream.path).to.equal(file);
 
-                internals.removeLog(reporter._currentStream.path);
+                internals.removeLog(reporter._writeStream.path);
                 done();
             });
         });
 
-        it('properly sets up the path and file information if only a path is specified', function (done) {
+        it('properly creates a random file if the directory option is specified', function (done) {
 
-            var reporter = new GoodFile('./test/fixtures/');
+            var reporter = new GoodFile({}, { directory: internals.tempDir });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exist;
+                expect(error).to.not.exist();
+                expect(/good-file-\d+-.+.log/g.test(reporter._writeStream.path)).to.be.true();
 
-                var path = reporter._currentStream.path;
-                expect(/\d+\.good/g.test(path)).to.equal(true);
-
-                internals.removeLog(path);
-
+                internals.removeLog(reporter._writeStream.path);
                 done();
             });
-        });
-
-        it('will callback with an error if it occurs', function (done) {
-
-            var reporter = new GoodFile('./this/is/fake');
-            var ee = new EventEmitter();
-
-            reporter.start(ee, function (error) {
-
-                expect(error).to.exist;
-                done();
-            });
-        });
-
-        it('ignores files with non-numerical extensions that match the file name', function (done) {
-
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            Fs.writeFileSync(file + '.fake', 'dummy log data for testing');
-            var ee = new EventEmitter();
-
-            var reporter = new GoodFile(file);
-
-            reporter.start(ee, function (err) {
-
-                expect(err).to.not.exist;
-
-                expect(reporter._currentStream.path).to.equal(file + '.001');
-                internals.removeLog(reporter._currentStream.path);
-                internals.removeLog(file + '.fake');
-                done();
-            });
-        });
-
-        it('formats the date using the moment syntax', function (done) {
-
-            var ee = new EventEmitter();
-            var reporter = new GoodFile('./test/fixtures/', { request: '*'}, {
-                format: 'YYYY-MM-DD',
-                extension: 'good-log'
-            });
-
-            reporter.start(ee, function (err) {
-
-                expect(err).to.not.exist;
-
-                expect(/\d{4}-\d{2}-\d{2}.good-log$/g.test(reporter._currentStream.path)).to.be.true;
-                internals.removeLog(reporter._currentStream.path);
-                done();
-            });
-        });
-
-        it('will create the full file specified by the "fileName" option', function (done) {
-
-            var file = Path.resolve('./test/fixtures/');
-            var reporter = new GoodFile(file, {}, {
-                fileName: 'ops.log'
-            });
-            var ee = new EventEmitter();
-
-            reporter.start(ee, function (error) {
-
-                expect(error).to.not.exist;
-
-                expect(reporter._currentStream.path).to.equal(file + '/ops.log');
-
-                internals.removeLog(reporter._currentStream.path);
-                done();
-            });
-
         });
     });
 
@@ -227,16 +153,14 @@ describe('GoodFile', function () {
 
         it('writes to the current file and does not create a new one', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            var reporter = new GoodFile(file, {
-              request:  '*'
-            });
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({ request:  '*' }, { file: file });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.equal(file + '.001');
+                expect(error).to.not.exist();
+                expect(reporter._writeStream.path).to.equal(file);
 
                 for (var i = 0; i < 20; ++i) {
 
@@ -245,126 +169,20 @@ describe('GoodFile', function () {
 
                 setTimeout(function () {
 
-                    expect(error).to.not.exist;
+                    expect(error).to.not.exist();
 
-                    expect(reporter._currentStream.bytesWritten).to.equal(900);
-                    expect(reporter._currentStream._good.length).to.equal(900);
-                    expect(reporter._currentStream.path).to.equal(file + '.001');
-                    internals.removeLog(reporter._currentStream.path);
+                    expect(reporter._writeStream.bytesWritten).to.equal(900);
+                    internals.removeLog(reporter._writeStream.path);
 
                     done();
-                }, 2000);
-            });
-        });
-
-        it('writes to the current file and does not create a new one using the "fileName" option', function (done) {
-
-            var file = Path.resolve('./test/fixtures/');
-            var reporter = new GoodFile(file, { request: '*' }, {
-                fileName: 'ops.log'
-            });
-            var ee = new EventEmitter();
-
-            reporter.start(ee, function (error) {
-
-                expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.equal(file + '/ops.log');
-                expect(reporter._settings.maxLogSize).to.equal(Infinity);
-
-                for (var i = 0; i < 50; ++i) {
-
-                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
-                }
-
-                setTimeout(function () {
-
-                    expect(error).to.not.exist;
-
-                    expect(reporter._currentStream.bytesWritten).to.equal(2280);
-                    expect(reporter._currentStream._good.length).to.equal(2280);
-                    expect(reporter._currentStream.path).to.equal(file + '/ops.log');
-                    internals.removeLog(reporter._currentStream.path);
-
-                    done();
-                }, 2000);
-            });
-        });
-
-        it('creates new log files if the maxsize is exceeded', function (done) {
-
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            var reporter = new GoodFile(file, {
-                request: '*'
-            }, {
-                maxLogSize: 300
-            });
-            var ee = new EventEmitter();
-
-            reporter.start(ee, function (error) {
-
-                expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.equal(file + '.001');
-
-                for (var i = 0; i < 20; ++i) {
-                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test ' + i });
-                }
-
-                setTimeout(function () {
-
-                    expect(reporter._currentStream.bytesWritten).to.equal(92);
-                    expect(reporter._currentStream._good.length).to.equal(92);
-                    expect(reporter._currentStream.path).to.equal(file + '.004');
-
-                    internals.removeLog(file + '.001');
-                    internals.removeLog(file + '.002');
-                    internals.removeLog(file + '.003');
-                    internals.removeLog(file + '.004');
-
-                    done();
-
-                }, 2000);
-            });
-        });
-
-        it('create a new log file next in the sequence if existing log files are present', function (done) {
-
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            Fs.writeFileSync(file + '.001', 'dummy log data for testing');
-            var reporter = new GoodFile(file, {
-                request: '*'
-            });
-            var ee = new EventEmitter();
-
-            reporter.start(ee, function (error) {
-
-                expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.equal(file + '.002');
-
-                for (var i = 0; i < 20; ++i) {
-                    ee.emit('report', 'request', { statusCode:200, id: i });
-                }
-
-                setTimeout(function() {
-
-                    expect(reporter._currentStream.bytesWritten).to.equal(530);
-                    expect(reporter._currentStream._good.length).to.equal(530);
-                    expect(reporter._currentStream.path).to.equal(file + '.002');
-
-                    internals.removeLog(file + '.001');
-                    internals.removeLog(file + '.002');
-
-                    done();
-
-                }, 2000);
+                }, internals.timeout);
             });
         });
 
         it('handles circular references in objects', function (done) {
 
-            var file = Hoek.uniqueFilename('./test/fixtures')
-            var reporter = new GoodFile(file, {
-                request: '*'
-            });
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({ request: '*' }, { file: file });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -382,192 +200,75 @@ describe('GoodFile', function () {
 
                 setTimeout(function() {
 
-                    internals.getLog(reporter._currentStream.path, function (error, results) {
+                    internals.getLog(reporter._writeStream.path, function (error, results) {
 
-                        expect(error).to.not.exist;
+                        expect(error).to.not.exist();
                         expect(results.length).to.equal(1);
                         expect(results[0]._data).to.equal('[Circular ~]');
 
-                        internals.removeLog(reporter._currentStream.path);
+                        internals.removeLog(reporter._writeStream.path);
 
                         done();
                     });
-                }, 2000);
+                }, internals.timeout);
             });
         });
 
-        it('uses the file name and extension in calculating the next file', function (done) {
+        it('can handle a large number of events', function (done) {
 
-            var file1 = Hoek.uniqueFilename('./test/fixtures');
-            var file2 = Hoek.uniqueFilename('./test/fixtures');
-            var ee1 = new EventEmitter();
-            var ee2 = new EventEmitter();
-
-            Fs.writeFileSync(file1 + '.010', 'dummy log data for testing');
-            var reporter = new GoodFile(file1, { request: '*' });
-            var reporterTwo = new GoodFile(file2, { request: '*' });
-
-            reporter.start(ee1, function() {
-
-                reporterTwo.start(ee2, function () {
-
-                    ee1.emit('report', 'request', { id: 1, data: 'reporter 1' });
-                    ee2.emit('report', 'request', { id: 2, data: 'reporter 2' });
-                    ee2.emit('report', 'request', { id: 3, data: 'reporter 2' });
-
-                    setTimeout(function() {
-
-                        expect(reporter._currentStream.path).to.equal(file1 + '.011');
-                        expect(reporter._currentStream.bytesWritten).to.equal(29);
-                        expect(reporter._currentStream._good.length).to.equal(29);
-
-                        expect(reporterTwo._currentStream.path).to.contain(file2 + '.001');
-                        expect(reporterTwo._currentStream.bytesWritten).to.equal(58);
-                        expect(reporterTwo._currentStream._good.length).to.equal(58);
-
-                        internals.removeLog(reporterTwo._currentStream.path);
-                        internals.removeLog(reporter._currentStream.path);
-                        internals.removeLog(file1 + '.010');
-
-                        done();
-
-                    }, 2000);
-                });
-            });
-        });
-
-        it('can handle a large number of events without building back-pressure on the WriteStream', function (done) {
-
-            var file = Hoek.uniqueFilename('./test/fixtures');
-            var reporter = new GoodFile(file, { request: '*' });
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({ request: '*' }, { file: file });
             var ee = new EventEmitter();
-            var drain = false;
-            var writeCount = 0;
-            var write = Writable.prototype.write;
-
-            Writable.prototype.write = function (chunk, encoding) {
-
-                writeCount++;
-                if (writeCount == 10000) {
-                    reporter._currentStream.end();
-                    internals.removeLog(reporter._currentStream.path);
-                    expect(reporter._currentStream._good.length).to.equal(727707);
-                    Writable.prototype.write = write;
-
-                    return done();
-                }
-                return write.call(this, chunk, encoding);
-            };
-
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exist;
-                expect(reporter._currentStream.path).to.equal(file + '.001');
-
-                reporter._currentStream.on('drain', function () {
-
-                    drain = true;
-                    expect(reporter._queue.paused).to.be.true;
-                });
+                expect(error).to.not.exist();
+                expect(reporter._writeStream.path).to.equal(file);
 
                 for (var i = 0; i <= 10000; i++) {
                     ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'value for iteration ' + i });
                 }
+                setTimeout(function() {
+
+                    reporter.stop();
+                    expect(reporter._writeStream.bytesWritten).to.equal(727855);
+                    internals.removeLog(reporter._writeStream.path);
+
+                    done();
+                }, internals.timeout);
             });
         });
 
-        it('rotates log files based on the rotationTime option', function (done) {
+        it('will log events even after a delay', function (done) {
 
-            var reporter = new GoodFile('./test/fixtures/', { request:  '*' }, {
-                rotationTime:.00001,
-                extension: 'time'
-            });
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile({ request: '*' }, { file: file });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exist;
-                expect(reporter._settings.rotationTime).to.exist;
+                expect(error).to.not.exist();
+                expect(reporter._writeStream.path).to.equal(file);
 
-                for (var i = 0; i < 10; ++i) {
-
-                    ee.emit('report', 'request', { statusCode: 200, id: i, tag: 'my test ' + i });
+                for (var i = 0; i <= 100; i++) {
+                    ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'value for iteration ' + i });
                 }
 
-                setTimeout(function () {
+                setTimeout(function() {
 
-                    for (var j = 0; j < 10; ++j) {
-
-                        ee.emit('report', 'request', { statusCode: 200, id: j, tag: 'my test after 1000' + j });
+                    for (var i = 0; i <= 100; i++) {
+                        ee.emit('report', 'request', { id: i, timestamp: Date.now(), value: 'inner iteration ' + i });
                     }
-                }, 900);
 
-                setTimeout(function () {
+                    setTimeout(function() {
 
-                    expect(error).to.not.exist;
+                        reporter.stop();
+                        expect(reporter._writeStream.bytesWritten).to.equal(13498);
+                        internals.removeLog(reporter._writeStream.path);
+                        done();
+                    }, internals.timeout);
 
-                    reporter.stop();
-
-                    Fs.readdir('./test/fixtures', function (err, filenames) {
-
-                        var i = 0;
-                        filenames = filenames.filter(function (item) {
-
-                            return item.indexOf('time') > -1;
-                        });
-
-                        // Since they are time based, order them, oldest to newest
-                        filenames.sort(function (a, b) {
-
-                            return parseInt(a, 10) - parseInt(b, 10);
-                        });
-
-                        Async.eachSeries(filenames, function (item, next) {
-
-                            var path = './test/fixtures/' + item;
-
-                            internals.getLog(path, function (err, log) {
-
-                                expect(err).to.not.exist;
-
-                                if (i === 0) {
-                                    expect(log).to.deep.equal([
-                                        { statusCode: 200, id: 0, tag: "my test 0" },
-                                        { statusCode: 200, id: 1, tag: "my test 1" },
-                                        { statusCode: 200, id: 2, tag: "my test 2" },
-                                        { statusCode: 200, id: 3, tag: "my test 3" },
-                                        { statusCode: 200, id: 4, tag: "my test 4" },
-                                        { statusCode: 200, id: 5, tag: "my test 5" },
-                                        { statusCode: 200, id: 6, tag: "my test 6" },
-                                        { statusCode: 200, id: 7, tag: "my test 7" },
-                                        { statusCode: 200, id: 8, tag: "my test 8" },
-                                        { statusCode: 200, id: 9, tag: "my test 9" }
-                                    ]);
-                                } else if (i === 1) {
-                                    expect(log).to.deep.equal([
-                                        { statusCode: 200, id: 0, tag: "my test after 10000" },
-                                        { statusCode: 200, id: 1, tag: "my test after 10001" },
-                                        { statusCode: 200, id: 2, tag: "my test after 10002" },
-                                        { statusCode: 200, id: 3, tag: "my test after 10003" },
-                                        { statusCode: 200, id: 4, tag: "my test after 10004" },
-                                        { statusCode: 200, id: 5, tag: "my test after 10005" },
-                                        { statusCode: 200, id: 6, tag: "my test after 10006" },
-                                        { statusCode: 200, id: 7, tag: "my test after 10007" },
-                                        { statusCode: 200, id: 8, tag: "my test after 10008" },
-                                        { statusCode: 200, id: 9, tag: "my test after 10009" }
-                                    ]);
-                                } else {
-                                    expect(log).to.be.empty;
-                                }
-
-                                i++;
-
-                                Fs.unlink(path, next);
-                            });
-                        }, done);
-                    });
-                }, 2000);
+                }, 100);
             });
         });
     });

@@ -3,7 +3,6 @@
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
 var Os = require('os');
-var Readable = require('stream').Readable;
 
 var Code = require('code');
 var Lab = require('lab');

@@ -124,7 +124,7 @@ describe('GoodFile', function () {
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
             var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile(file, {});
+            var reporter = new GoodFile(file);
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -140,7 +140,7 @@ describe('GoodFile', function () {
 
         it('properly creates a random file if the directory option is specified', function (done) {
 
-            var reporter = new GoodFile({ path: internals.tempDir }, {});
+            var reporter = new GoodFile({ path: internals.tempDir });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -160,7 +160,7 @@ describe('GoodFile', function () {
                 extension: 'fun',
                 prefix: 'ops-log',
                 format: 'YY$Mo$DDDD'
-            }, {});
+            });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {

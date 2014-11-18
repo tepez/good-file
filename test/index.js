@@ -50,18 +50,18 @@ describe('GoodFile', function () {
 
         expect(function () {
 
-            var reporter = GoodFile('./fixtures', {});
+            var reporter = GoodFile();
         }).to.throw('GoodFile must be created with new');
 
         done();
     });
 
-    it('throws an error if missing file', function (done) {
+    it('validates the options argument', function (done) {
 
         expect(function () {
 
-            var reporter = new GoodFile({});
-        }).to.throw('file or directory must be specified as strings');
+            var reporter = new GoodFile();
+        }).to.throw(Error, /value must be a (string|number)/);
 
         done();
     });
@@ -69,7 +69,7 @@ describe('GoodFile', function () {
     it('stop() ends the stream', function (done) {
 
         var file = Hoek.uniqueFilename(internals.tempDir);
-        var reporter = new GoodFile({ request:  '*' }, { file: file });
+        var reporter = new GoodFile(file, { request:  '*' });
         var ee = new EventEmitter();
 
         reporter.start(ee, function (error) {
@@ -100,7 +100,7 @@ describe('GoodFile', function () {
     it('logs a stream error if it occurs', function (done) {
 
         var file = Hoek.uniqueFilename(internals.tempDir);
-        var reporter = new GoodFile({ request:  '*' }, { file: file });
+        var reporter = new GoodFile(file, { request:  '*' });
         var ee = new EventEmitter();
         var logError = console.error;
 
@@ -124,7 +124,7 @@ describe('GoodFile', function () {
         it('properly sets up the path and file information if the file name is specified', function (done) {
 
             var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile({}, { file: file });
+            var reporter = new GoodFile(file, {});
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -140,13 +140,33 @@ describe('GoodFile', function () {
 
         it('properly creates a random file if the directory option is specified', function (done) {
 
-            var reporter = new GoodFile({}, { directory: internals.tempDir });
+            var reporter = new GoodFile({ path: internals.tempDir }, {});
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
                 expect(error).to.not.exist();
                 expect(/good-file-\d+-.+.log/g.test(reporter._writeStream.path)).to.be.true();
+
+                internals.removeLog(reporter._writeStream.path);
+                done();
+            });
+        });
+
+        it('uses the options passed via directory', function (done) {
+
+            var reporter = new GoodFile({
+                path: internals.tempDir,
+                extension: 'fun',
+                prefix: 'ops-log',
+                format: 'YY$Mo$DDDD'
+            }, {});
+            var ee = new EventEmitter();
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist();
+                expect(/\/ops-log-\d{2}\$\d{2}th\$\d{3}-.+.fun/g.test(reporter._writeStream.path)).to.be.true();
 
                 internals.removeLog(reporter._writeStream.path);
                 done();
@@ -159,7 +179,7 @@ describe('GoodFile', function () {
         it('writes to the current file and does not create a new one', function (done) {
 
             var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile({ request:  '*' }, { file: file });
+            var reporter = new GoodFile(file, { request:  '*' });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -189,7 +209,7 @@ describe('GoodFile', function () {
         it('handles circular references in objects', function (done) {
 
             var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile({ request: '*' }, { file: file });
+            var reporter = new GoodFile(file, { request: '*' });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -226,7 +246,7 @@ describe('GoodFile', function () {
         it('can handle a large number of events', function (done) {
 
             var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile({ request: '*' }, { file: file });
+            var reporter = new GoodFile(file, { request: '*' });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
@@ -253,7 +273,7 @@ describe('GoodFile', function () {
         it('will log events even after a delay', function (done) {
 
             var file = Hoek.uniqueFilename(internals.tempDir);
-            var reporter = new GoodFile({ request: '*' }, { file: file });
+            var reporter = new GoodFile(file, { request: '*' });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {

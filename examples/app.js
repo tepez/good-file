@@ -1,9 +1,7 @@
 var Http = require('http');
 var Os = require('os');
-var Fs = require('fs');
 
 var Hapi = require('hapi');
-var EventEmitter = require('events').EventEmitter;
 var Hoek = require('hoek');
 var GoodFile = require('../');
 

@@ -3,14 +3,11 @@ var Os = require('os');
 var Fs = require('fs');
 
 var Hapi = require('hapi');
-<<<<<<< Updated upstream
 var EventEmitter = require('events').EventEmitter;
-=======
 var Hoek = require('hoek');
->>>>>>> Stashed changes
 var GoodFile = require('../');
 
-var server = new Hapi.Server('127.0.0.1', 31337);
+var server = new Hapi.Server('127.0.0.1', 0);
 
 var reporter = new GoodFile(Hoek.uniqueFilename(Os.tmpDir()), { request: '*' });
 
@@ -46,10 +43,6 @@ server.route({
             id: request.id
         });
 
-<<<<<<< Updated upstream
-        reply(200);
-=======
         reply().code(200);
->>>>>>> Stashed changes
     }
 });

@@ -1,10 +1,15 @@
 var Http = require('http');
+var Os = require('os');
+var Fs = require('fs');
+
 var Hapi = require('hapi');
+var EventEmitter = require('events').EventEmitter;
+var Hoek = require('hoek');
 var GoodFile = require('../');
 
-var server = new Hapi.Server('127.0.0.1', 31337);
+var server = new Hapi.Server('127.0.0.1', 0);
 
-var reporter = new GoodFile('./test/fixtures/example', { request: '*' });
+var reporter = new GoodFile(Hoek.uniqueFilename(Os.tmpDir()), { request: '*' });
 
 server.start(function() {
 
@@ -22,6 +27,7 @@ server.start(function() {
             Http.get(server.info.uri);
         }
         console.info('Done');
+        console.info('Check %s for file results', reporter._writeStream.path);
     });
 });
 
@@ -37,6 +43,6 @@ server.route({
             id: request.id
         });
 
-        reply().statusCode(200);
+        reply().code(200);
     }
 });

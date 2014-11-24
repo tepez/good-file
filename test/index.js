@@ -376,7 +376,6 @@ describe('GoodFile', function () {
                                     tag: 'my test 2 - 0'
                                 });
 
-
                                 for (var i = 0, il = files.length; i < il; ++i) {
                                     expect(/good-file-\d+#\d+#\d+-[\w,\d]+$/g.test(files[i])).to.be.true();
                                     internals.removeLog(files[i]);
@@ -385,12 +384,10 @@ describe('GoodFile', function () {
                                 done();
                             });
                         });
-
                     });
 
                     for (var i = 0; i < 10; ++i) {
-
-                        ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test 2 - ' + i });
+                        ee.emit('report', 'request', { statusCode: 200, id: i, tag: 'my test 2 - ' + i });
                     }
 
                     reporter.stop();

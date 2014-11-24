@@ -3,6 +3,7 @@
 var EventEmitter = require('events').EventEmitter;
 var Fs = require('fs');
 var Os = require('os');
+var Path = require('path');
 
 var Code = require('code');
 var Lab = require('lab');
@@ -88,7 +89,7 @@ describe('GoodFile', function () {
                 expect(reporter._writeStream.bytesWritten).to.equal(35);
                 expect(reporter._writeStream.path).to.equal(file);
                 expect(reporter._writeStream._writableState.ended).to.be.true();
-                expect(reporter._stopped).to.be.true();
+                expect(reporter._state.stopped).to.be.true();
 
                 internals.removeLog(reporter._writeStream.path);
 
@@ -108,6 +109,7 @@ describe('GoodFile', function () {
 
             console.error = logError;
             expect(value.message).to.equal('mock error');
+            expect(reporter._state.stopped).to.be.true();
             internals.removeLog(reporter._writeStream.path);
             done();
         };
@@ -300,6 +302,99 @@ describe('GoodFile', function () {
 
                     reporter.stop();
                 }, 500);
+            });
+        });
+
+        it('rotates logs on the specified internal', function (done) {
+
+            var reporter = new GoodFile({
+                path: internals.tempDir,
+                rotate: 'daily',
+                format: 'YY#DDDD#MM',
+                extension: ''
+            }, { request:  '*' });
+            var ee = new EventEmitter();
+            var min = Math.min;
+
+            var files = [];
+
+            var pathOne = Path.join(internals.tempDir, 'rotate1');
+            var pathTwo = Path.join(internals.tempDir, 'rotate2');
+
+            Math.min = function () {
+
+                Math.min = min;
+                return 100;
+            };
+
+            var getFile = reporter.getFile;
+
+            reporter.getFile = function () {
+
+                var result = getFile.call(this);
+
+                files.push(result);
+
+                return result;
+            };
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist();
+
+                for (var i = 0; i < 10; ++i) {
+
+                    ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test 1 - ' + i });
+                }
+
+                setTimeout(function () {
+
+                    reporter._writeStream.on('finish', function () {
+
+                        internals.getLog(files[0], function (err, fileOne) {
+
+                            expect(err).to.not.exist();
+
+                            internals.getLog(files[1], function (err, fileTwo) {
+
+                                expect(err).to.not.exist();
+
+                                var one = fileOne[0];
+                                var two = fileTwo[0];
+
+                                expect(fileOne).to.have.length(10);
+                                expect(fileTwo).to.have.length(10);
+
+                                expect(one).to.deep.equal({
+                                    statusCode: 200,
+                                    id: 0,
+                                    tag: 'my test 1 - 0'
+                                });
+                                expect(two).to.deep.equal({
+                                    statusCode: 200,
+                                    id: 0,
+                                    tag: 'my test 2 - 0'
+                                });
+
+
+                                for (var i = 0, il = files.length; i < il; ++i) {
+                                    expect(/good-file-\d+#\d+#\d+-[\w,\d]+$/g.test(files[i])).to.be.true();
+                                    internals.removeLog(files[i]);
+                                }
+
+                                done();
+                            });
+                        });
+
+                    });
+
+                    for (var i = 0; i < 10; ++i) {
+
+                        ee.emit('report', 'request', { statusCode:200, id: i, tag: 'my test 2 - ' + i });
+                    }
+
+                    reporter.stop();
+                }, 150);
             });
         });
     });

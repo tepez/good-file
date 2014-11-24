@@ -1,6 +1,5 @@
 var Http = require('http');
 var Hapi = require('hapi');
-var EventEmitter = require('events').EventEmitter;
 var GoodFile = require('../');
 
 var server = new Hapi.Server('127.0.0.1', 31337);
@@ -38,6 +37,6 @@ server.route({
             id: request.id
         });
 
-        reply(200);
+        reply().statusCode(200);
     }
 });

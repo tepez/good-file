@@ -121,6 +121,21 @@ describe('GoodFile', function () {
         });
     });
 
+    it('properly sanitizes `format`, `prefix` and `extension`', function (done) {
+
+        var sep = Path.sep;
+        var reporter = new GoodFile({
+            path: internals.tempDir,
+            format: 'Y' + sep + 'M' + sep,
+            extension: 'foo' + sep + 'bar'
+        });
+
+        expect(reporter._settings.format).to.equal('Y-M-');
+        expect(reporter._settings.extension).to.equal('.foo-bar');
+
+        done();
+    });
+
     describe('start()', function () {
 
         it('properly sets up the path and file information if the file name is specified', function (done) {

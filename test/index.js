@@ -231,7 +231,7 @@ describe('GoodFile', function () {
 
             reporter.start(ee, function (error) {
 
-                expect(error).to.not.exit;
+                expect(error).to.not.exist();
 
                 var data = {
                     id: 1,

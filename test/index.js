@@ -176,14 +176,14 @@ describe('GoodFile', function () {
                 path: internals.tempDir,
                 extension: 'fun',
                 prefix: 'ops-log',
-                format: 'YY$Mo$DDDD'
+                format: 'YY$DDDD'
             });
             var ee = new EventEmitter();
 
             reporter.start(ee, function (error) {
 
                 expect(error).to.not.exist();
-                expect(/\/ops-log-\d{2}\$\d{2}th\$\d{3}-.+.fun/g.test(reporter._writeStream.path)).to.be.true();
+                expect(/\/ops-log-\d{2}\$\d{3}-.+.fun/g.test(reporter._writeStream.path)).to.be.true();
 
                 internals.removeLog(reporter._writeStream.path);
                 done();

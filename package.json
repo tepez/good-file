@@ -8,11 +8,12 @@
     "test": "make test-cov"
   },
   "dependencies": {
-    "good-reporter": "3.x.x",
+    "good-squeeze": "1.x.x",
     "hoek": "2.x.x",
     "joi": "5.x.x",
     "json-stringify-safe": "5.0.x",
-    "moment": "2.8.x"
+    "moment": "2.8.x",
+    "through2": "0.6.x"
   },
   "devDependencies": {
     "code": "1.x.x",

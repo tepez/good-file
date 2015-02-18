@@ -11,9 +11,9 @@ Lead Maintainer: [Adam Bretz](https://github.com/arb)
 `good-file` is a [good](https://github.com/hapijs/good) reporter implementation to write [hapi](http://hapijs.com/) server events to the local file system.
 
 ## Good File
-### new GoodFile (events, config)
+### GoodFile (events, config)
 
-creates a new GoodFile object with the following arguments
+Creates a new GoodFile object where:
 
 - `events` - an object of key value pairs.
 	- `key` - one of the supported [good events](https://github.com/hapijs/good) indicating the hapi event to subscribe to
@@ -27,3 +27,11 @@ creates a new GoodFile object with the following arguments
 	 	- `[prefix]` - file name prefix to use when creating a file. Defaults to "good-file"
 	 	- `[rotate]` - a string indicating a log rotation time span. The designated time span will start a timer that will trigger at the *end* of the specified time span. For example, using "daily", a new log file would be created at *approximately* 11:59:59.999 on the current day. Please see [this section](http://momentjs.com/docs/#/manipulating/end-of/) in the Moment.js documentation for more details. The string must be one of the following values: ['hourly', 'daily', 'weekly', 'monthly'].
 > **Limitations** A new file is *always* created when the process starts, regardless of `rotate` option; this is to prevent collisions. So if you start and stop the process several times in a row, there will be a new file created each time and a new timer will start at the beginning of the process. There is also a maximum "wait time" good-file can allow. If your time string exceeds this number, it will be replaced with `2^31 - 1` milliseconds (about 25 days). This is a limitation in how JavaScript/[Node implements](https://github.com/joyent/node/blob/master/lib/timers.js#L29) timers. There are also several time related precision issues when working with JavaScript. The log rotation will happen "close enough" to the desired `rotate` option.
+
+## GoodFile Methods
+### `goodfile.init(stream, emitter, callback)`
+Initializes the reporter with the following arguments:
+
+- `stream` - a Node readable stream that will be the source of data for this reporter. It is assumed that `stream` is in `objectMode`.
+- `emitter` - an event emitter object.
+- `callback` - a callback to execute when the start function has complete all the necessary set up steps and is ready to receive data.

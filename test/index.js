@@ -35,7 +35,7 @@ internals.getLog = function (path, callback) {
             return callback(error);
         }
 
-        var results = JSON.parse('[' + data.replace(/\n/g,',').slice(0,-1) + ']');
+        var results = JSON.parse('[' + data.replace(/\n/g, ',').slice(0, -1) + ']');
         callback(null, results);
     });
 };
@@ -43,14 +43,14 @@ internals.getLog = function (path, callback) {
 
 internals.readStream = function (done) {
 
-    // var result = new Stream.Readable({ objectMode: true });
-    // result._read = Hoek.ignore;
-    //
-    // if (typeof done === 'function') {
-    //     result.once('end', done);
-    // }
-    //
-    // return result;
+    var result = new Stream.Readable({ objectMode: true });
+    result._read = Hoek.ignore;
+
+    if (typeof done === 'function') {
+        result.once('end', done);
+    }
+
+    return result;
 };
 
 // Lab shortcuts
@@ -87,7 +87,7 @@ describe('GoodFile', function () {
 
     it('will clear the timeout on the "stop" event', function (done) {
 
-        var reporter = new GoodFile({ request:  '*' }, {
+        var reporter = new GoodFile({ request: '*' }, {
             path: internals.tempDir,
             rotate: 'daily'
         });
@@ -121,7 +121,7 @@ describe('GoodFile', function () {
     it('logs an error if one occurs on the write stream and tears down the pipeline', function (done) {
 
         var file = Hoek.uniqueFilename(internals.tempDir);
-        var reporter = new GoodFile({ request:  '*' }, file);
+        var reporter = new GoodFile({ request: '*' }, file);
         var ee = new EventEmitter();
         var logError = console.error;
         var read = internals.readStream();
@@ -159,7 +159,7 @@ describe('GoodFile', function () {
     it('writes to the current file and does not create a new one', function (done) {
 
         var file = Hoek.uniqueFilename(internals.tempDir);
-        var reporter = new GoodFile({ request:  '*' }, file);
+        var reporter = new GoodFile({ request: '*' }, file);
         var ee = new EventEmitter();
         var read = internals.readStream();
 
@@ -179,7 +179,7 @@ describe('GoodFile', function () {
             });
 
             for (var i = 0; i < 20; ++i) {
-                read.push({ event: 'request', statusCode:200, id: i, tag: 'my test ' + i });
+                read.push({ event: 'request', statusCode: 200, id: i, tag: 'my test ' + i });
             }
 
             read.push(null);
@@ -287,7 +287,7 @@ describe('GoodFile', function () {
 
     it('rotates logs on the specified internal', function (done) {
 
-        var reporter = new GoodFile({ request:  '*' }, {
+        var reporter = new GoodFile({ request: '*' }, {
             path: internals.tempDir,
             rotate: 'daily',
             format: 'YY#DDDD#MM',
@@ -325,7 +325,7 @@ describe('GoodFile', function () {
 
             for (var i = 0; i < 10; ++i) {
 
-                read.push({ event: 'request', statusCode:200, id: i, tag: 'my test 1 - ' + i });
+                read.push({ event: 'request', statusCode: 200, id: i, tag: 'my test 1 - ' + i });
             }
 
             setTimeout(function () {

@@ -1,7 +1,7 @@
 {
   "name": "good-file",
   "version": "4.0.2",
-  "repository": "git://github.com/hapijs/good-reporter",
+  "repository": "git://github.com/hapijs/good-file",
   "description": "Good reporter file module",
   "main": "index.js",
   "scripts": {
@@ -9,11 +9,15 @@
     "test-cov-html": "lab -m 5000 -r html -o coverage.html -La code"
   },
   "dependencies": {
-    "good-reporter": "3.x.x",
+    "good-squeeze": "2.x.x",
     "hoek": "2.x.x",
     "joi": "5.x.x",
     "json-stringify-safe": "5.0.x",
-    "moment": "2.8.x"
+    "moment": "2.8.x",
+    "through2": "0.6.x"
+  },
+  "peerDependencies": {
+    "good": ">= 6.x.x"
   },
   "devDependencies": {
     "code": "1.x.x",

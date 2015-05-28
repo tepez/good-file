@@ -105,7 +105,7 @@ describe('GoodFile', function () {
 
             ee.emit('stop');
 
-            reporter._streams.write.on('finish', function() {
+            reporter._streams.write.on('finish', function () {
 
                 expect(reporter._streams.write.bytesWritten).to.equal(53);
                 expect(reporter._streams.write._writableState.ended).to.be.true();
@@ -168,7 +168,7 @@ describe('GoodFile', function () {
             expect(error).to.not.exist();
             expect(reporter._streams.write.path).to.equal(file);
 
-            reporter._streams.write.on('finish', function() {
+            reporter._streams.write.on('finish', function () {
 
                 expect(error).to.not.exist();
                 expect(reporter._streams.write.bytesWritten).to.equal(1260);
@@ -205,7 +205,7 @@ describe('GoodFile', function () {
 
             data._data = data;
 
-            reporter._streams.write.on('finish', function() {
+            reporter._streams.write.on('finish', function () {
 
                 internals.getLog(reporter._streams.write.path, function (error, results) {
 
@@ -236,7 +236,7 @@ describe('GoodFile', function () {
             expect(error).to.not.exist();
             expect(reporter._streams.write.path).to.equal(file);
 
-            reporter._streams.write.on('finish', function() {
+            reporter._streams.write.on('finish', function () {
 
                 expect(reporter._streams.write.bytesWritten).to.equal(907873);
                 internals.removeLog(reporter._streams.write.path);
@@ -263,7 +263,7 @@ describe('GoodFile', function () {
             expect(error).to.not.exist();
             expect(reporter._streams.write.path).to.equal(file);
 
-            reporter._streams.write.on('finish', function() {
+            reporter._streams.write.on('finish', function () {
 
                 expect(reporter._streams.write.bytesWritten).to.equal(17134);
                 internals.removeLog(reporter._streams.write.path);
@@ -274,7 +274,7 @@ describe('GoodFile', function () {
                 read.push({ event: 'request', id: i, timestamp: Date.now(), value: 'value for iteration ' + i });
             }
 
-            setTimeout(function() {
+            setTimeout(function () {
 
                 for (var i = 0; i <= 100; i++) {
                     read.push({ event: 'request', id: i, timestamp: Date.now(), value: 'inner iteration ' + i });

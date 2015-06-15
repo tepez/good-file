@@ -13,6 +13,7 @@ var Hoek = require('hoek');
 var GoodFile = require('..');
 
 
+
 // Declare internals
 
 var internals = {
@@ -109,7 +110,7 @@ describe('GoodFile', function () {
 
                 expect(reporter._streams.write.bytesWritten).to.equal(53);
                 expect(reporter._streams.write._writableState.ended).to.be.true();
-                expect(reporter._state.timeout._idleTimeout).to.equal(-1);
+                expect(reporter._state.timeout._timeout._idleTimeout).to.equal(-1);
 
                 internals.removeLog(reporter._streams.write.path);
 
@@ -285,7 +286,7 @@ describe('GoodFile', function () {
         });
     });
 
-    it('rotates logs on the specified internal', function (done) {
+    it('rotates logs on the specified interval', function (done) {
 
         var reporter = new GoodFile({ request: '*' }, {
             path: internals.tempDir,
@@ -293,20 +294,16 @@ describe('GoodFile', function () {
             format: 'YY#DDDD#MM',
             extension: ''
         });
+
+        var Moment = require('moment');
+
         var ee = new EventEmitter();
-        var min = Math.min;
         var read = internals.readStream();
 
         var files = [];
 
         var pathOne = Path.join(internals.tempDir, 'rotate1');
         var pathTwo = Path.join(internals.tempDir, 'rotate2');
-
-        Math.min = function () {
-
-            Math.min = min;
-            return 100;
-        };
 
         var getFile = reporter.getFile;
 
@@ -318,6 +315,21 @@ describe('GoodFile', function () {
 
             return result;
         };
+
+        // Moment function override for tests
+        var oldMoment = Moment;
+        var oldMomentUtc = Moment.utc;
+
+        Moment.utc = function () {
+
+            var returnval = oldMomentUtc();
+            returnval.endOf = function () {
+
+                return this.add(100, 'ms');
+            };
+            return returnval;
+        };
+        Moment.prototype = oldMoment.prototype;
 
         reporter.init(read, ee, function (error) {
 
@@ -374,7 +386,7 @@ describe('GoodFile', function () {
                 }
 
                 read.push(null);
-            }, 200);
+            }, 175);
         });
     });
 

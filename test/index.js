@@ -208,9 +208,9 @@ describe('GoodFile', function () {
 
             reporter._streams.write.on('finish', function () {
 
-                internals.getLog(reporter._streams.write.path, function (error, results) {
+                internals.getLog(reporter._streams.write.path, function (err, results) {
 
-                    expect(error).to.not.exist();
+                    expect(err).to.not.exist();
                     expect(results.length).to.equal(1);
                     expect(results[0]._data).to.equal('[Circular ~]');
 
@@ -277,8 +277,8 @@ describe('GoodFile', function () {
 
             setTimeout(function () {
 
-                for (var i = 0; i <= 100; i++) {
-                    read.push({ event: 'request', id: i, timestamp: Date.now(), value: 'inner iteration ' + i });
+                for (var j = 0; j <= 100; j++) {
+                    read.push({ event: 'request', id: j, timestamp: Date.now(), value: 'inner iteration ' + j });
                 }
 
                 read.push(null);
@@ -371,9 +371,9 @@ describe('GoodFile', function () {
                                 tag: 'my test 2 - 0'
                             });
 
-                            for (var i = 0, il = files.length; i < il; ++i) {
-                                expect(/good-file-\d+#\d+#\d+-[\w,\d]+$/g.test(files[i])).to.be.true();
-                                internals.removeLog(files[i]);
+                            for (var j = 0, jl = files.length; j < jl; ++j) {
+                                expect(/good-file-\d+#\d+#\d+-[\w,\d]+$/g.test(files[j])).to.be.true();
+                                internals.removeLog(files[j]);
                             }
 
                             done();
@@ -381,8 +381,8 @@ describe('GoodFile', function () {
                     });
                 });
 
-                for (var i = 0; i < 10; ++i) {
-                    read.push({ event: 'request', statusCode: 200, id: i, tag: 'my test 2 - ' + i });
+                for (var k = 0; k < 10; ++k) {
+                    read.push({ event: 'request', statusCode: 200, id: k, tag: 'my test 2 - ' + k });
                 }
 
                 read.push(null);

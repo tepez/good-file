@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "big-time": "1.0.x",
+    "fs-extra": "0.24.0",
     "good-squeeze": "2.x.x",
     "hoek": "2.x.x",
     "joi": "5.x.x",

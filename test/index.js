@@ -390,6 +390,54 @@ describe('GoodFile', function () {
         });
     });
 
+    it('creates path to logs file if it does not exist', function (done) {
+
+        var dir = Path.join(internals.tempDir, 'test');
+        var file = Hoek.uniqueFilename(dir);
+
+        Fs.stat(file, function (error) {
+
+            // We expect an error to be thrown, because this directory should
+            // not yet exist.
+            expect(error).to.exist();
+
+            var reporter = new GoodFile({ request: '*' }, file);
+            var ee = new EventEmitter();
+            var read = internals.readStream();
+
+            reporter.init(read, ee, function (err) {
+
+                expect(err).to.not.exist();
+                expect(reporter._streams.write.path).to.equal(file);
+
+                reporter._streams.write.on('finish', function () {
+
+                    expect(reporter._streams.write.bytesWritten).to.equal(60);
+
+                    // Be extra certain that the directory was created.
+                    Fs.stat(file, function (err) {
+
+                        expect(err).to.not.exist();
+
+                        // Ensure that we have removed all files from this temp directory before we delete it.
+                        Fs.readdirSync(dir).forEach(function (f) {
+
+                            internals.removeLog(Path.join(dir, f));
+                        });
+
+                        Fs.rmdirSync(dir);
+
+                        done();
+                    });
+                });
+
+                read.push({ event: 'request', statusCode: 200, id: 0, tag: 'my test' });
+
+                read.push(null);
+            });
+        });
+    });
+
     describe('init()', function () {
 
         it('properly sets up the path and file information if the file name is specified', function (done) {

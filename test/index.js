@@ -80,7 +80,7 @@ describe('GoodFile', function () {
 
         expect(function () {
 
-            var reporter = new GoodFile({ log: '*' });
+            new GoodFile({ log: '*' });
         }).to.throw(Error, /value must be a (string|number)/);
 
         done();
@@ -301,9 +301,6 @@ describe('GoodFile', function () {
         var read = internals.readStream();
 
         var files = [];
-
-        var pathOne = Path.join(internals.tempDir, 'rotate1');
-        var pathTwo = Path.join(internals.tempDir, 'rotate2');
 
         var getFile = reporter.getFile;
 

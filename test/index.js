@@ -145,6 +145,7 @@ describe('GoodFile', function () {
             read.push(null);
 
             ee.emit('stop');
+            Bt.clearTimeout = clear;
 
             reporter._streams.write.on('finish', function () {
 
@@ -152,7 +153,6 @@ describe('GoodFile', function () {
                 expect(reporter._streams.write._writableState.ended).to.be.true();
 
                 internals.removeLog(reporter._streams.write.path);
-                Bt.clearTimeout = clear;
                 expect(called).to.be.false();
 
                 done();

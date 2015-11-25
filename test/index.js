@@ -8,6 +8,7 @@ var Stream = require('stream');
 
 var Code = require('code');
 var Lab = require('lab');
+var Bt = require('big-time');
 var lab = exports.lab = Lab.script();
 var Hoek = require('hoek');
 var GoodFile = require('..');
@@ -113,6 +114,46 @@ describe('GoodFile', function () {
                 expect(reporter._state.timeout._timeout._idleTimeout).to.equal(-1);
 
                 internals.removeLog(reporter._streams.write.path);
+
+                done();
+            });
+        });
+    });
+
+    it('does not clear the timeout if rotate has not been set', function (done) {
+
+        var reporter = new GoodFile({ request: '*' }, {
+            path: internals.tempDir
+        });
+
+        var ee = new EventEmitter();
+        var read = internals.readStream();
+        var called = false;
+
+        var clear = Bt.clearTimeout;
+        Bt.clearTimeout = function () {
+
+            called = true;
+        };
+
+        reporter.init(read, ee, function (error) {
+
+            expect(error).to.not.exist();
+            expect(reporter._state.timeout).to.not.exist();
+
+            read.push({ event: 'request', id: 1, timestamp: Date.now() });
+            read.push(null);
+
+            ee.emit('stop');
+
+            reporter._streams.write.on('finish', function () {
+
+                expect(reporter._streams.write.bytesWritten).to.equal(53);
+                expect(reporter._streams.write._writableState.ended).to.be.true();
+
+                internals.removeLog(reporter._streams.write.path);
+                Bt.clearTimeout = clear;
+                expect(called).to.be.false();
 
                 done();
             });

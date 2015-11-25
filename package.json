@@ -1,6 +1,6 @@
 {
   "name": "good-file",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "repository": "git://github.com/hapijs/good-file",
   "description": "Good reporter file module",
   "main": "lib/index.js",
